@@ -13,6 +13,19 @@
           New Node
         </button>
 
+        <button
+          @click="addEdge"
+          class="bg-gray-800 absolute bottom-0 left-0 w-60 h-20 hover:bg-gray-900 text-white text-3xl"
+        >
+          New Edge
+        </button>
+
+        <input
+          type="text"
+          v-model="tEdgeInput"
+          class="bg-gray-800 absolute bottom-0 left-0 hover:bg-gray-900 text-white text-md"
+        >
+
         <!-- simulate -->
         <button
           class="bg-gray-800 absolute top-0 right-0 w-60 h-20 hover:bg-gray-900 text-white text-3xl z-10"
@@ -35,7 +48,7 @@
         >
           <button
             @mouseup="checkDeleteNode($event, node)"
-            class="fixed w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 border-gray-900"
+            class="fixed z-10 w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 border-gray-900"
             :style="node.style"
             :ref="(el) => (node.ref = el)"
           >
@@ -43,6 +56,18 @@
               {{ node.id }}
             </span>
           </button>
+        </div>
+
+        <!-- edges -->
+        <div
+          v-for="edge in edges"
+          :key="edge.id"
+        >
+          <div
+            class="fixed bg-gray-900"
+            :style="computeEdgeStyle(edge)"
+          ></div>
+          <!-- add arrow indicating edge direction and label indicating weight -->
         </div>
       </div>
     </div>
@@ -62,9 +87,96 @@ type Node = {
   ref: Element | ComponentPublicInstance | null | any
 }
 
+type Edge = {
+  id: number
+  from: number
+  to: number
+  weight: number
+}
+
 const nodesCreated = ref(0)
 
 const nodes = ref<Node[]>([])
+const edges = ref<Edge[]>([])
+
+const tEdgeInput = ref('')
+
+const addEdge = () => {
+
+  const [to, from] = tEdgeInput.value.split(' ').map((n) => parseInt(n))
+
+  const edge: Edge = {
+    id: edges.value.length,
+    from,
+    to,
+    weight: 1,
+  }
+
+  edges.value.push(edge)
+}
+
+const computeEdgeStyle = (edge: Edge) => {
+  const fromNode = nodes.value.find((n) => n.id === edge.from)
+  const toNode = nodes.value.find((n) => n.id === edge.to)
+
+  if (!fromNode || !toNode) return {}
+
+  const fromRect = fromNode.ref.getBoundingClientRect()
+  const toRect = toNode.ref.getBoundingClientRect()
+
+  // handle self-referencing states. they should go out a little and make a curved loop back
+  if (toNode === fromNode) {
+    // TODO: implement
+  }
+
+  // handle bidirectional edges by offsetting them
+  const allEdgesWithNodes = edges.value.filter((e) => e.from === edge.from || e.to === edge.from)
+  const isBidirectional = allEdgesWithNodes.length > 1
+  // at most two edges may share a node
+  const edgeIndex = allEdgesWithNodes.findIndex((e) => e.id === edge.id)
+  const isMinNode = edgeIndex === 0
+
+  const x1 = fromRect.x + fromRect.width / 2
+  const y1 = fromRect.y + fromRect.height / 2
+  const x2 = toRect.x + toRect.width / 2
+  const y2 = toRect.y + toRect.height / 2
+
+  const angle = Math.atan2(y2 - y1, x2 - x1) * (180 / Math.PI)
+
+  const length = Math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+
+  if (isBidirectional) {
+    if (isMinNode) {
+      return {
+        width: `${length}px`,
+        height: '7px',
+        transform: `rotate(${angle}deg)`,
+        transformOrigin: `0 0`,
+        top: `${y1 + 10}px`,
+        left: `${x1 + 10}px`,
+      }
+    } else {
+      return {
+        width: `${length}px`,
+        height: '7px',
+        transform: `rotate(${angle}deg)`,
+        transformOrigin: `0 0`,
+        top: `${y1 - 10}px`,
+        left: `${x1 - 10}px`,
+      }
+    }
+  }
+
+  return {
+    width: `${length}px`,
+    height: '7px',
+    transform: `rotate(${angle}deg)`,
+    transformOrigin: '0 0',
+    top: `${y1}px`,
+    left: `${x1}px`,
+  }
+
+}
 
 const killBox = ref(null)
 const killBoxMessage = ref('Delete Node')
@@ -108,11 +220,8 @@ const checkDeleteNode = (event: any, node: Node) => {
     // delete node
     const index = nodes.value.findIndex((n) => n.id === node.id)
 
-    // remove all references to node in other nodes
-    nodes.value.forEach((node) => {
-      const index = node.children.findIndex((n) => n === event.target.id)
-      node.children.splice(index, 1)
-    })
+    // delete all edges connected to node
+    edges.value = edges.value.filter((e) => e.from !== node.id && e.to !== node.id)
 
     // update kill box message
     killBoxMessage.value = `Node ${node.id} Was Tasty!`
