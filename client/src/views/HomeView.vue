@@ -70,12 +70,42 @@
           <!-- add arrow indicating edge direction and label indicating weight -->
         </div>
       </div>
+
     </div>
+
+    <div class="absolute top-0 left-0 z-50 text-white text-xl bg-red-500 p-4 opacity-75">
+      <b>
+        Adjacency Map:
+      </b>
+      <br>
+      <div>
+        {{ adjacencyMap }}
+      </div>
+    </div>
+
+
+
+    <div
+      class="absolute top-0 right-0 text-white text-xl bg-blue-500 p-4 z-50 opacity-75"
+    >
+      <b>
+        Transition Matrix:
+      </b>
+      <div
+        v-for="row in transitionMatrix"
+        class="flex flex-row w-full justify-around gap-7"
+      >
+        <div v-for="cell in row">
+          {{ cell.toFixed(2)}}
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, type ComponentPublicInstance } from 'vue'
+import { ref, computed, type ComponentPublicInstance } from 'vue'
 import { useDraggable } from '@vueuse/core'
 
 type Node = {
@@ -103,7 +133,7 @@ const tEdgeInput = ref('')
 
 const addEdge = () => {
 
-  const [to, from] = tEdgeInput.value.split(' ').map((n) => parseInt(n))
+  const [from, to] = tEdgeInput.value.split(' ').map((n) => parseInt(n))
 
   const edge: Edge = {
     id: edges.value.length,
@@ -232,4 +262,23 @@ const checkDeleteNode = (event: any, node: Node) => {
     }, 2000)
   }
 }
+
+const adjacencyMap = computed(() => nodes.value.reduce((acc, curr) => acc.set(
+  curr.id,
+  edges.value
+    .filter((edge) => edge.from === curr.id)
+    .map((edge) => edge.to)
+), new Map() as Map<number, number[]>))
+
+const transitionMatrix = computed(() => Array.from(adjacencyMap.value).reduce((acc, [node, children]) => {
+  // replace uniform weight with adjustable weights
+  const uniformWeight = 1 / children.length
+  const noChildMap = (n: Node) => n.id === node ? 1 : 0
+  const childMap = (n: Node) => children.includes(n.id) ? uniformWeight : 0
+  const row = children.length === 0
+    ? nodes.value.map(noChildMap)
+    : nodes.value.map(childMap)
+  acc.push(row)
+  return acc
+}, [] as number[][]))
 </script>
