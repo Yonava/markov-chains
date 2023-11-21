@@ -25,7 +25,7 @@
           ref="killBox"
           class="bg-red-800 absolute bottom-0 right-0 hover:bg-red-700 text-white text-3xl hover:bg-red-700 px-10 py-5"
         >
-          Delete Node
+          {{ killBoxMessage }}
         </div>
 
         <!-- nodes -->
@@ -34,7 +34,7 @@
           :key="node.id"
         >
           <button
-            @mouseup="checkDeleteNode"
+            @mouseup="checkDeleteNode($event, node)"
             class="fixed w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 border-gray-900"
             :style="node.style"
             :ref="(el) => (node.ref = el)"
@@ -50,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, type ComponentPublicInstance, type ComputedRef } from 'vue'
+import { ref, type ComponentPublicInstance } from 'vue'
 import { useDraggable } from '@vueuse/core'
 
 type Node = {
@@ -67,6 +67,7 @@ const nodesCreated = ref(0)
 const nodes = ref<Node[]>([])
 
 const killBox = ref(null)
+const killBoxMessage = ref('Delete Node')
 
 const addNode = async () => {
   const node: Node = {
@@ -92,12 +93,10 @@ const addNode = async () => {
   nodes.value[index].style = style
 }
 
-const checkDeleteNode = (event: any) => {
+const checkDeleteNode = (event: any, node: Node) => {
   // see if node is in kill box
   const killBoxRect = killBox.value.getBoundingClientRect()
   const nodeRect = event.target.getBoundingClientRect()
-
-  console.log(killBoxRect, nodeRect)
 
   if (
     nodeRect.x > killBoxRect.x &&
@@ -105,9 +104,23 @@ const checkDeleteNode = (event: any) => {
     nodeRect.y > killBoxRect.y &&
     nodeRect.y < killBoxRect.y + killBoxRect.height
   ) {
+
     // delete node
-    const index = nodes.value.findIndex((n) => n.id === event.target.id)
+    const index = nodes.value.findIndex((n) => n.id === node.id)
+
+    // remove all references to node in other nodes
+    nodes.value.forEach((node) => {
+      const index = node.children.findIndex((n) => n === event.target.id)
+      node.children.splice(index, 1)
+    })
+
+    // update kill box message
+    killBoxMessage.value = `Node ${node.id} Was Tasty!`
     nodes.value.splice(index, 1)
+
+    setTimeout(() => {
+      killBoxMessage.value = 'Delete Node'
+    }, 2000)
   }
 }
 </script>
