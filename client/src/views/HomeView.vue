@@ -241,10 +241,10 @@ const checkDeleteNode = (event: any, node: Node) => {
   const nodeRect = event.target.getBoundingClientRect()
 
   if (
-    nodeRect.x > killBoxRect.x &&
-    nodeRect.x < killBoxRect.x + killBoxRect.width &&
-    nodeRect.y > killBoxRect.y &&
-    nodeRect.y < killBoxRect.y + killBoxRect.height
+    nodeRect.x > killBoxRect.x - 60 &&
+    nodeRect.x < killBoxRect.x + killBoxRect.width + 60 &&
+    nodeRect.y > killBoxRect.y - 60 &&
+    nodeRect.y < killBoxRect.y + killBoxRect.height + 60
   ) {
 
     // delete node
