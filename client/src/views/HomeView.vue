@@ -171,10 +171,25 @@ const computeEdgeStyle = (edge: Edge) => {
   const x2 = toRect.x + toRect.width / 2
   const y2 = toRect.y + toRect.height / 2
 
-  const angle = Math.atan2(y2 - y1, x2 - x1) * (180 / Math.PI)
+  const radians = Math.atan2(y2 - y1, x2 - x1)
+  const angle = radians * (180 / Math.PI)
 
   const length = Math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
 
+  const calculatePerpendicularOffset = (angle: number, lineSeparation: number) => {
+    const perpendicularAngle = angle + Math.PI / 2
+    const distanceX = lineSeparation * Math.cos(perpendicularAngle)
+    const distanceY = lineSeparation * Math.sin(perpendicularAngle)
+
+    return {
+      distanceX,
+      distanceY,
+    }
+  }
+
+  const {distanceX, distanceY}  = calculatePerpendicularOffset(radians, 10)
+  
+  
   if (isBidirectional) {
     if (isMinNode) {
       return {
@@ -182,8 +197,8 @@ const computeEdgeStyle = (edge: Edge) => {
         height: '7px',
         transform: `rotate(${angle}deg)`,
         transformOrigin: `0 0`,
-        top: `${y1 + 10}px`,
-        left: `${x1 + 10}px`,
+        top: `${y1 + distanceY}px`,
+        left: `${x1 + distanceX}px`,
       }
     } else {
       return {
@@ -191,8 +206,8 @@ const computeEdgeStyle = (edge: Edge) => {
         height: '7px',
         transform: `rotate(${angle}deg)`,
         transformOrigin: `0 0`,
-        top: `${y1 - 10}px`,
-        left: `${x1 - 10}px`,
+        top: `${y1 + distanceY}px`,
+        left: `${x1 + distanceX}px`,
       }
     }
   }
