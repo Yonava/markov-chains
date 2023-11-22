@@ -49,13 +49,14 @@
           <button
             @mouseup="checkDeleteNode($event, node)"
             class="fixed z-10 w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 border-gray-900"
-            :style="node.style"
+            :style="node.style + '; opacity:' + (node.style ? 1 : 0)"
             :ref="(el) => (node.ref = el)"
           >
             <span class="text-white text-3xl">
               {{ node.id }}
             </span>
           </button>
+
         </div>
 
         <!-- edges -->
@@ -82,8 +83,6 @@
         {{ adjacencyMap }}
       </div>
     </div>
-
-
 
     <div
       class="absolute top-0 right-0 text-white text-xl bg-blue-500 p-4 z-50 opacity-75"
@@ -187,9 +186,9 @@ const computeEdgeStyle = (edge: Edge) => {
     }
   }
 
-  const {distanceX, distanceY}  = calculatePerpendicularOffset(radians, 10)
-  
-  
+  const { distanceX, distanceY }  = calculatePerpendicularOffset(radians, 10)
+
+
   if (isBidirectional) {
     if (isMinNode) {
       return {
