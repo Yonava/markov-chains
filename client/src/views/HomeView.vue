@@ -209,7 +209,7 @@ const computeEdgeStyle = (edge: Edge) => {
         arrow: {
           width: 0,
           height: 0,
-          transform: `translate(${length / 2 + 5}px, -20px)`,
+          transform: `translate(${length / 2 + 5}px, -16px)`,
           'border-top': '20px solid transparent',
           'border-bottom': '20px solid transparent',
           'border-left': '20px solid rgb(17 24 39)',
@@ -228,7 +228,7 @@ const computeEdgeStyle = (edge: Edge) => {
         arrow: {
           width: 0,
           height: 0,
-          transform: `translate(${length / 2 + 5}px, -10px)`,
+          transform: `translate(${length / 2 + 5}px, -16px)`,
           'border-top': '20px solid transparent',
           'border-bottom': '20px solid transparent',
           'border-left': '20px solid rgb(17 24 39)',
