@@ -12,6 +12,7 @@
   "dependencies": {
     "@vueuse/core": "^10.6.1",
     "pinia": "^2.1.7",
+    "strongly-connected-components": "^1.0.1",
     "vue": "^3.3.4",
     "vue-router": "^4.2.5"
   },

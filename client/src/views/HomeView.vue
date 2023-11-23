@@ -76,7 +76,10 @@
 
     </div>
 
-    <div class="absolute top-0 left-0 z-50 text-white text-xl bg-red-500 p-4 opacity-75">
+    <div
+      class="absolute top-0 left-0 z-50 text-white text-xl bg-red-500 p-4 opacity-75"
+      style="pointer-events: none;"
+    >
       <b>
         Adjacency Map:
       </b>
@@ -94,6 +97,7 @@
 
     <div
       class="absolute top-0 right-0 text-white text-xl bg-blue-500 p-4 z-50 opacity-75"
+      style="pointer-events: none;"
     >
       <b>
         Transition Matrix:
@@ -103,7 +107,7 @@
         class="flex flex-row w-full justify-around gap-7"
       >
         <div v-for="cell in row">
-          {{ cell.toFixed(2)}}
+          {{ cell.toFixed(2) }}
         </div>
       </div>
     </div>
@@ -114,7 +118,7 @@
 <script setup lang="ts">
 import { ref, computed, type ComponentPublicInstance } from 'vue'
 import { useDraggable } from '@vueuse/core'
-import { findStronglyCoupledComponents } from '@/StronglyCoupled';
+import { useStateAnalysis } from '@/useStateAnalysis';
 
 type Node = {
   id: number
@@ -305,5 +309,5 @@ const transitionMatrix = computed(() => Array.from(adjacencyMap.value).reduce((a
   return acc
 }, [] as number[][]))
 
-const stronglyCoupled = computed(() =>  findStronglyCoupledComponents(adjacencyMap.value))
+const stronglyCoupled = useStateAnalysis(adjacencyMap)
 </script>
