@@ -72,9 +72,19 @@
               :style="computeEdgeStyle(edge).arrow"
               >
               <p 
-                class="text-white"
-                :style="computeEdgeStyle(edge).weight"
+                v-if="!edge.isEditing" 
+                @dblclick="startEditing(edge)"
+                :style="computeEdgeStyle(edge).weight" 
+                class="text-white" 
               >{{ edge.weight }}</p>
+              <input 
+                v-else 
+                @blur="stopEditing(edge)" 
+                @keyup.enter="stopEditing(edge)"
+                :style="computeEdgeStyle(edge).weight" 
+                type="text" 
+                v-model="edge.weight" 
+              >
             </div>
           </div>
         </div>
@@ -129,6 +139,7 @@ type Edge = {
   from: number
   to: number
   weight: number
+  isEditing: boolean
 }
 
 const nodesCreated = ref(0)
@@ -147,9 +158,17 @@ const addEdge = () => {
     from,
     to,
     weight: 1,
+    isEditing: false,
   }
 
   edges.value.push(edge)
+}
+
+const startEditing = (edge: Edge) => {
+  edge.isEditing = true;
+}
+const stopEditing = (edge: Edge) => {
+  edge.isEditing = false;
 }
 
 const computeEdgeStyle = (edge: Edge) => {
