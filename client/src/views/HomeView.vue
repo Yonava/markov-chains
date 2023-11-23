@@ -191,13 +191,16 @@ const computeEdgeStyle = (edge: Edge) => {
   }
 
   const { distanceX, distanceY }  = calculatePerpendicularOffset(radians, 10)
+
+  const unitX = distanceX / Math.sqrt(distanceX ** 2 + distanceY ** 2)
+  const unitY = distanceY / Math.sqrt(distanceX ** 2 + distanceY ** 2)
   
   if (isBidirectional) {
     if (isMinNode) {
       return {
         line: {
           width: `${length}px`,
-          height: '7px',
+          height: '8px',
           transform: `rotate(${angle}deg)`,
           transformOrigin: `0 0`,
           top: `${y1 + distanceY}px`,
@@ -216,7 +219,7 @@ const computeEdgeStyle = (edge: Edge) => {
       return {
         line: {
           width: `${length}px`,
-          height: '7px',
+          height: '8px',
           transform: `rotate(${angle}deg)`,
           transformOrigin: `0 0`,
           top: `${y1 + distanceY}px`,
@@ -225,7 +228,7 @@ const computeEdgeStyle = (edge: Edge) => {
         arrow: {
           width: 0,
           height: 0,
-          transform: `translate(${length / 2 + 5}px, -20px)`,
+          transform: `translate(${length / 2 + 5}px, -10px)`,
           'border-top': '20px solid transparent',
           'border-bottom': '20px solid transparent',
           'border-left': '20px solid rgb(17 24 39)',
@@ -237,16 +240,16 @@ const computeEdgeStyle = (edge: Edge) => {
   return {
     line: {
       width: `${length}px`,
-      height: '7px',
+      height: '8px',
       transform: `rotate(${angle}deg)`,
       transformOrigin: '0 0',
-      top: `${y1}px`,
-      left: `${x1}px`,
+      top: `${y1 - unitY * 4}px`,
+      left: `${x1 - unitX * 4}px`,
     },
     arrow: {
       width: 0, 
       height: 0,
-      transform: `translate(${length/2}px, -20px)`,
+      transform: `translate(${length/2}px, -16px)`,
       'border-top': '20px solid transparent',
       'border-bottom': '20px solid transparent',
       'border-left': '20px solid rgb(17 24 39)',
