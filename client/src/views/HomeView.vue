@@ -192,9 +192,6 @@ const computeEdgeStyle = (edge: Edge) => {
 
   const { distanceX, distanceY }  = calculatePerpendicularOffset(radians, 10)
   
-  const centerX = (x1 + x2) / 2
-  const centerY = (y1 + y2) / 2
-
   if (isBidirectional) {
     if (isMinNode) {
       return {
