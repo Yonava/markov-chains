@@ -66,8 +66,12 @@
         >
           <div
             class="fixed bg-gray-900"
-            :style="computeEdgeStyle(edge)"
-          ></div>
+            :style="computeEdgeStyle(edge).line"
+          >
+            <div
+              :style="computeEdgeStyle(edge).arrow"
+            ></div>
+          </div>
           <!-- add arrow indicating edge direction and label indicating weight -->
         </div>
       </div>
@@ -187,37 +191,69 @@ const computeEdgeStyle = (edge: Edge) => {
   }
 
   const { distanceX, distanceY }  = calculatePerpendicularOffset(radians, 10)
-
+  
+  const centerX = (x1 + x2) / 2
+  const centerY = (y1 + y2) / 2
 
   if (isBidirectional) {
     if (isMinNode) {
       return {
-        width: `${length}px`,
-        height: '7px',
-        transform: `rotate(${angle}deg)`,
-        transformOrigin: `0 0`,
-        top: `${y1 + distanceY}px`,
-        left: `${x1 + distanceX}px`,
+        line: {
+          width: `${length}px`,
+          height: '7px',
+          transform: `rotate(${angle}deg)`,
+          transformOrigin: `0 0`,
+          top: `${y1 + distanceY}px`,
+          left: `${x1 + distanceX}px`,
+        },
+        arrow: {
+          width: 0,
+          height: 0,
+          transform: `translate(${length / 2 + 5}px, -20px)`,
+          'border-top': '20px solid transparent',
+          'border-bottom': '20px solid transparent',
+          'border-left': '20px solid #1a202c',
+        }  
       }
     } else {
       return {
-        width: `${length}px`,
-        height: '7px',
-        transform: `rotate(${angle}deg)`,
-        transformOrigin: `0 0`,
-        top: `${y1 + distanceY}px`,
-        left: `${x1 + distanceX}px`,
+        line: {
+          width: `${length}px`,
+          height: '7px',
+          transform: `rotate(${angle}deg)`,
+          transformOrigin: `0 0`,
+          top: `${y1 + distanceY}px`,
+          left: `${x1 + distanceX}px`,
+        },
+        arrow: {
+          width: 0,
+          height: 0,
+          transform: `translate(${length / 2 + 5}px, -20px)`,
+          'border-top': '20px solid transparent',
+          'border-bottom': '20px solid transparent',
+          'border-left': '20px solid #1a202c',
+        }  
       }
     }
   }
 
   return {
-    width: `${length}px`,
-    height: '7px',
-    transform: `rotate(${angle}deg)`,
-    transformOrigin: '0 0',
-    top: `${y1}px`,
-    left: `${x1}px`,
+    line: {
+      width: `${length}px`,
+      height: '7px',
+      transform: `rotate(${angle}deg)`,
+      transformOrigin: '0 0',
+      top: `${y1}px`,
+      left: `${x1}px`,
+    },
+    arrow: {
+      width: 0, 
+      height: 0,
+      transform: `translate(${length/2}px, -20px)`,
+      'border-top': '20px solid transparent',
+      'border-bottom': '20px solid transparent',
+      'border-left': '20px solid #1a202c',
+    }      
   }
 
 }
