@@ -305,5 +305,5 @@ const transitionMatrix = computed(() => Array.from(adjacencyMap.value).reduce((a
   return acc
 }, [] as number[][]))
 
-const stronglyCoupled = computed(() =>  findStronglyCoupledComponents(adjacencyMap.value))
+const stronglyCoupled = computed(() => findStronglyCoupledComponents(adjacencyMap.value))
 </script>
