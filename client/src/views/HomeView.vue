@@ -118,7 +118,7 @@
 <script setup lang="ts">
 import { ref, computed, type ComponentPublicInstance } from 'vue'
 import { useDraggable } from '@vueuse/core'
-import { findStronglyCoupledComponents } from '@/StronglyCoupled';
+import { useStateAnalysis } from '@/useStateAnalysis';
 
 type Node = {
   id: number
@@ -309,26 +309,5 @@ const transitionMatrix = computed(() => Array.from(adjacencyMap.value).reduce((a
   return acc
 }, [] as number[][]))
 
-const stronglyCoupled = computed(() => {
-  const {
-    stronglyCoupledComponents,
-    adjacencyMap: componentAdjacencyMap
-  } = findStronglyCoupledComponents(adjacencyMap.value)
-
-  const transientStates = []
-  const recurrentClasses = []
-
-  for (const [node, children] of componentAdjacencyMap) {
-    if (children.length === 0) {
-      recurrentClasses.push(stronglyCoupledComponents[node])
-    } else {
-      transientStates.push(stronglyCoupledComponents[node])
-    }
-  }
-
-  return {
-    transientStates: transientStates.flat(),
-    recurrentClasses,
-  }
-})
+const stronglyCoupled = useStateAnalysis(adjacencyMap)
 </script>

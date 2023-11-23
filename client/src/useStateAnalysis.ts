@@ -1,5 +1,6 @@
 // @ts-ignore
 import scc from 'strongly-connected-components';
+import { computed, type Ref } from 'vue';
 
 // node id -> list of child node ids
 type AdjacencyMap = Map<number, number[]>;
@@ -23,7 +24,10 @@ const makeAdjacencyList = (adjacencyMap: AdjacencyMap): { list: number[][], map:
   }
 }
 
-export function findStronglyCoupledComponents(adjacencyMap: AdjacencyMap) {
+const findStronglyCoupledComponents = (adjacencyMap: AdjacencyMap): {
+  stronglyCoupledComponents: number[][],
+  adjacencyMap: AdjacencyMap,
+} => {
 
   const { list, map } = makeAdjacencyList(adjacencyMap);
   const { components } = scc(list);
@@ -38,7 +42,7 @@ export function findStronglyCoupledComponents(adjacencyMap: AdjacencyMap) {
   };
 }
 
-export function createAdjacencyMapSCC(stronglyCoupledComponents: number[][], inputAdjacencyMap: AdjacencyMap) {
+const createAdjacencyMapSCC = (stronglyCoupledComponents: number[][], inputAdjacencyMap: AdjacencyMap) => {
   const adjacencyMap = new Map<number, number[]>();
   const nodeToComponentMap = new Map<number, number>();
 
@@ -58,4 +62,29 @@ export function createAdjacencyMapSCC(stronglyCoupledComponents: number[][], inp
   })
 
   return adjacencyMap;
+}
+
+export function useStateAnalysis(adjacencyMap: Ref<AdjacencyMap>) {
+  return computed(() => {
+    const {
+      stronglyCoupledComponents,
+      adjacencyMap: componentAdjacencyMap
+    } = findStronglyCoupledComponents(adjacencyMap.value)
+
+    const transientStates = []
+    const recurrentClasses = []
+
+    for (const [node, children] of componentAdjacencyMap) {
+      if (children.length === 0) {
+        recurrentClasses.push(stronglyCoupledComponents[node])
+      } else {
+        transientStates.push(stronglyCoupledComponents[node])
+      }
+    }
+
+    return {
+      transientStates: transientStates.flat(),
+      recurrentClasses,
+    }
+  })
 }
