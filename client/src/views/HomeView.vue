@@ -50,7 +50,7 @@
         >
           <button
             @mouseup="checkDeleteNode($event, node)"
-            class="fixed z-10 w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 border-gray-900"
+            :class="`fixed z-10 w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node)"
             :style="node.style + '; opacity:' + (node.style ? 1 : 0)"
             :ref="(el) => (node.ref = el)"
           >
@@ -73,19 +73,19 @@
             <div
               :style="computeEdgeStyle(edge).arrow"
               >
-              <p 
-                v-if="!edge.isEditing" 
+              <p
+                v-if="!edge.isEditing"
                 @dblclick="startEditing(edge)"
-                :style="computeEdgeStyle(edge).weight" 
-                class="text-white" 
+                :style="computeEdgeStyle(edge).weight"
+                class="text-white"
               >{{ edge.weight }}</p>
-              <input 
-                v-else 
-                @blur="stopEditing(edge)" 
+              <input
+                v-else
+                @blur="stopEditing(edge)"
                 @keyup.enter="stopEditing(edge)"
-                :style="computeEdgeStyle(edge).weight" 
-                type="text" 
-                v-model="edge.weight" 
+                :style="computeEdgeStyle(edge).weight"
+                type="text"
+                v-model="edge.weight"
               >
             </div>
           </div>
@@ -230,7 +230,7 @@ const computeEdgeStyle = (edge: Edge) => {
 
   const unitX = distanceX / Math.sqrt(distanceX ** 2 + distanceY ** 2)
   const unitY = distanceY / Math.sqrt(distanceX ** 2 + distanceY ** 2)
-  
+
   if (isBidirectional) {
     if (isMinNode) {
       return {
@@ -252,7 +252,7 @@ const computeEdgeStyle = (edge: Edge) => {
         },
         weight: {
           transform: `rotate(${-1 * angle}deg) translate(${unitX * 20}px, ${unitY * 20}px)`
-        }  
+        }
       }
     } else {
       return {
@@ -274,7 +274,7 @@ const computeEdgeStyle = (edge: Edge) => {
         },
         weight: {
           transform: `rotate(${-1 * angle}deg) translate(${unitX * 20}px, ${unitY * 20}px)`
-        }  
+        }
       }
     }
   }
@@ -289,7 +289,7 @@ const computeEdgeStyle = (edge: Edge) => {
       left: `${x1 - unitX * 4}px`,
     },
     arrow: {
-      width: 0, 
+      width: 0,
       height: 0,
       transform: `translate(${length/2}px, -16px)`,
       'border-top': '20px solid transparent',
@@ -298,7 +298,7 @@ const computeEdgeStyle = (edge: Edge) => {
     },
     weight: {
       transform: `rotate(${-1 * angle}deg) translate(${unitX * 20}px, ${unitY * 20}px)`
-    }      
+    }
   }
 
 }
@@ -378,4 +378,24 @@ const transitionMatrix = computed(() => Array.from(adjacencyMap.value).reduce((a
 }, [] as number[][]))
 
 const stronglyCoupled = useStateAnalysis(adjacencyMap)
+
+const getColor = (node: Node) => {
+
+  const index = stronglyCoupled.value.nodeToComponentMap.get(node.id)
+
+  if (stronglyCoupled.value.transientStates.includes(node.id)) return 'border-gray-900'
+  if (index === undefined) return 'bg-gray-900'
+
+  const colors = [
+    'border-red-500',
+    'border-yellow-500',
+    'border-green-500',
+    'border-blue-500',
+    'border-indigo-500',
+    'border-purple-500',
+    'border-pink-500',
+  ]
+
+  return colors[index % colors.length]
+}
 </script>

@@ -27,6 +27,7 @@ const makeAdjacencyList = (adjacencyMap: AdjacencyMap): { list: number[][], map:
 const findStronglyCoupledComponents = (adjacencyMap: AdjacencyMap): {
   stronglyCoupledComponents: number[][],
   adjacencyMap: AdjacencyMap,
+  nodeToComponentMap: Map<number, number>,
 } => {
 
   const { list, map } = makeAdjacencyList(adjacencyMap);
@@ -36,9 +37,15 @@ const findStronglyCoupledComponents = (adjacencyMap: AdjacencyMap): {
     return component.map((id: number) => map.get(id));
   })
 
+  const {
+    adjacencyMap: outputAdjacencyMap,
+    nodeToComponentMap,
+  } = createAdjacencyMapSCC(stronglyCoupledComponents, adjacencyMap);
+
   return {
     stronglyCoupledComponents,
-    adjacencyMap: createAdjacencyMapSCC(stronglyCoupledComponents, adjacencyMap),
+    adjacencyMap: outputAdjacencyMap,
+    nodeToComponentMap,
   };
 }
 
@@ -61,14 +68,18 @@ const createAdjacencyMapSCC = (stronglyCoupledComponents: number[][], inputAdjac
     adjacencyMap.set(componentIndex, [...componentChildrenSet]);
   })
 
-  return adjacencyMap;
+  return {
+    adjacencyMap,
+    nodeToComponentMap
+  }
 }
 
 export function useStateAnalysis(adjacencyMap: Ref<AdjacencyMap>) {
   return computed(() => {
     const {
       stronglyCoupledComponents,
-      adjacencyMap: componentAdjacencyMap
+      adjacencyMap: componentAdjacencyMap,
+      nodeToComponentMap,
     } = findStronglyCoupledComponents(adjacencyMap.value)
 
     const transientStates = []
@@ -85,6 +96,7 @@ export function useStateAnalysis(adjacencyMap: Ref<AdjacencyMap>) {
     return {
       transientStates: transientStates.flat(),
       recurrentClasses,
+      nodeToComponentMap,
     }
   })
 }
