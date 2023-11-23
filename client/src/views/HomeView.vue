@@ -209,7 +209,7 @@ const computeEdgeStyle = (edge: Edge) => {
           transform: `translate(${length / 2 + 5}px, -20px)`,
           'border-top': '20px solid transparent',
           'border-bottom': '20px solid transparent',
-          'border-left': '20px solid #1a202c',
+          'border-left': '20px solid rgb(17 24 39)',
         }  
       }
     } else {
@@ -228,7 +228,7 @@ const computeEdgeStyle = (edge: Edge) => {
           transform: `translate(${length / 2 + 5}px, -20px)`,
           'border-top': '20px solid transparent',
           'border-bottom': '20px solid transparent',
-          'border-left': '20px solid #1a202c',
+          'border-left': '20px solid rgb(17 24 39)',
         }  
       }
     }
@@ -249,7 +249,7 @@ const computeEdgeStyle = (edge: Edge) => {
       transform: `translate(${length/2}px, -20px)`,
       'border-top': '20px solid transparent',
       'border-bottom': '20px solid transparent',
-      'border-left': '20px solid #1a202c',
+      'border-left': '20px solid rgb(17 24 39)',
     }      
   }
 
