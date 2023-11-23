@@ -70,9 +70,13 @@
           >
             <div
               :style="computeEdgeStyle(edge).arrow"
-            ></div>
+              >
+              <p 
+                class="text-white"
+                :style="computeEdgeStyle(edge).weight"
+              >{{ edge.weight }}</p>
+            </div>
           </div>
-          <!-- add arrow indicating edge direction and label indicating weight -->
         </div>
       </div>
 
@@ -213,6 +217,9 @@ const computeEdgeStyle = (edge: Edge) => {
           'border-top': '20px solid transparent',
           'border-bottom': '20px solid transparent',
           'border-left': '20px solid rgb(17 24 39)',
+        },
+        weight: {
+          transform: `rotate(${-1 * angle}deg) translate(${unitX * 20}px, ${unitY * 20}px)`
         }  
       }
     } else {
@@ -232,6 +239,9 @@ const computeEdgeStyle = (edge: Edge) => {
           'border-top': '20px solid transparent',
           'border-bottom': '20px solid transparent',
           'border-left': '20px solid rgb(17 24 39)',
+        },
+        weight: {
+          transform: `rotate(${-1 * angle}deg) translate(${unitX * 20}px, ${unitY * 20}px)`
         }  
       }
     }
@@ -253,6 +263,9 @@ const computeEdgeStyle = (edge: Edge) => {
       'border-top': '20px solid transparent',
       'border-bottom': '20px solid transparent',
       'border-left': '20px solid rgb(17 24 39)',
+    },
+    weight: {
+      transform: `rotate(${-1 * angle}deg) translate(${unitX * 20}px, ${unitY * 20}px)`
     }      
   }
 
