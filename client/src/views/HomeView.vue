@@ -1,7 +1,9 @@
 <template>
   <div class="absolute w-full h-full bg-gray-600">
     <div class="flex flex-col items-center justify-center h-full p-12">
-      <h1 class="text-5xl font-bold text-white mb-5">
+      <h1
+        class="text-5xl font-bold text-white mb-5"
+      >
         Create A Markov Chain
       </h1>
       <div class="w-full h-[900px] bg-gray-700 rounded-xl relative overflow-hidden">
@@ -82,6 +84,12 @@
       <div>
         {{ adjacencyMap }}
       </div>
+      <b>
+        Strongly Coupled Components:
+      </b>
+      <div>
+        {{ stronglyCoupled }}
+      </div>
     </div>
 
     <div
@@ -106,6 +114,7 @@
 <script setup lang="ts">
 import { ref, computed, type ComponentPublicInstance } from 'vue'
 import { useDraggable } from '@vueuse/core'
+import { findStronglyCoupledComponents } from '@/StronglyCoupled';
 
 type Node = {
   id: number
@@ -295,4 +304,6 @@ const transitionMatrix = computed(() => Array.from(adjacencyMap.value).reduce((a
   acc.push(row)
   return acc
 }, [] as number[][]))
+
+const stronglyCoupled = computed(() =>  findStronglyCoupledComponents(adjacencyMap.value))
 </script>
