@@ -68,9 +68,27 @@
         >
           <div
             class="fixed bg-gray-900"
-            :style="computeEdgeStyle(edge)"
-          ></div>
-          <!-- add arrow indicating edge direction and label indicating weight -->
+            :style="computeEdgeStyle(edge).line"
+          >
+            <div
+              :style="computeEdgeStyle(edge).arrow"
+              >
+              <p 
+                v-if="!edge.isEditing" 
+                @dblclick="startEditing(edge)"
+                :style="computeEdgeStyle(edge).weight" 
+                class="text-white" 
+              >{{ edge.weight }}</p>
+              <input 
+                v-else 
+                @blur="stopEditing(edge)" 
+                @keyup.enter="stopEditing(edge)"
+                :style="computeEdgeStyle(edge).weight" 
+                type="text" 
+                v-model="edge.weight" 
+              >
+            </div>
+          </div>
         </div>
       </div>
 
@@ -134,6 +152,7 @@ type Edge = {
   from: number
   to: number
   weight: number
+  isEditing: boolean
 }
 
 const nodesCreated = ref(0)
@@ -152,9 +171,17 @@ const addEdge = () => {
     from,
     to,
     weight: 1,
+    isEditing: false,
   }
 
   edges.value.push(edge)
+}
+
+const startEditing = (edge: Edge) => {
+  edge.isEditing = true;
+}
+const stopEditing = (edge: Edge) => {
+  edge.isEditing = false;
 }
 
 const computeEdgeStyle = (edge: Edge) => {
@@ -201,36 +228,77 @@ const computeEdgeStyle = (edge: Edge) => {
 
   const { distanceX, distanceY }  = calculatePerpendicularOffset(radians, 10)
 
-
+  const unitX = distanceX / Math.sqrt(distanceX ** 2 + distanceY ** 2)
+  const unitY = distanceY / Math.sqrt(distanceX ** 2 + distanceY ** 2)
+  
   if (isBidirectional) {
     if (isMinNode) {
       return {
-        width: `${length}px`,
-        height: '7px',
-        transform: `rotate(${angle}deg)`,
-        transformOrigin: `0 0`,
-        top: `${y1 + distanceY}px`,
-        left: `${x1 + distanceX}px`,
+        line: {
+          width: `${length}px`,
+          height: '8px',
+          transform: `rotate(${angle}deg)`,
+          transformOrigin: `0 0`,
+          top: `${y1 + distanceY}px`,
+          left: `${x1 + distanceX}px`,
+        },
+        arrow: {
+          width: 0,
+          height: 0,
+          transform: `translate(${length / 2 + 5}px, -16px)`,
+          'border-top': '20px solid transparent',
+          'border-bottom': '20px solid transparent',
+          'border-left': '20px solid rgb(17 24 39)',
+        },
+        weight: {
+          transform: `rotate(${-1 * angle}deg) translate(${unitX * 20}px, ${unitY * 20}px)`
+        }  
       }
     } else {
       return {
-        width: `${length}px`,
-        height: '7px',
-        transform: `rotate(${angle}deg)`,
-        transformOrigin: `0 0`,
-        top: `${y1 + distanceY}px`,
-        left: `${x1 + distanceX}px`,
+        line: {
+          width: `${length}px`,
+          height: '8px',
+          transform: `rotate(${angle}deg)`,
+          transformOrigin: `0 0`,
+          top: `${y1 + distanceY}px`,
+          left: `${x1 + distanceX}px`,
+        },
+        arrow: {
+          width: 0,
+          height: 0,
+          transform: `translate(${length / 2 + 5}px, -16px)`,
+          'border-top': '20px solid transparent',
+          'border-bottom': '20px solid transparent',
+          'border-left': '20px solid rgb(17 24 39)',
+        },
+        weight: {
+          transform: `rotate(${-1 * angle}deg) translate(${unitX * 20}px, ${unitY * 20}px)`
+        }  
       }
     }
   }
 
   return {
-    width: `${length}px`,
-    height: '7px',
-    transform: `rotate(${angle}deg)`,
-    transformOrigin: '0 0',
-    top: `${y1}px`,
-    left: `${x1}px`,
+    line: {
+      width: `${length}px`,
+      height: '8px',
+      transform: `rotate(${angle}deg)`,
+      transformOrigin: '0 0',
+      top: `${y1 - unitY * 4}px`,
+      left: `${x1 - unitX * 4}px`,
+    },
+    arrow: {
+      width: 0, 
+      height: 0,
+      transform: `translate(${length/2}px, -16px)`,
+      'border-top': '20px solid transparent',
+      'border-bottom': '20px solid transparent',
+      'border-left': '20px solid rgb(17 24 39)',
+    },
+    weight: {
+      transform: `rotate(${-1 * angle}deg) translate(${unitX * 20}px, ${unitY * 20}px)`
+    }      
   }
 
 }
