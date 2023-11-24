@@ -72,7 +72,7 @@
           >
             <div
               :style="computeEdgeStyle(edge).arrow"
-              >
+            >
               <p
                 v-if="!edge.isEditing"
                 @dblclick="startEditing(edge)"
@@ -194,16 +194,9 @@ const computeEdgeStyle = (edge: Edge) => {
   const toRect = toNode.ref.getBoundingClientRect()
 
   // handle self-referencing states. they should go out a little and make a curved loop back
-  if (toNode === fromNode) {
+  if (edge.from === edge.to) {
     // TODO: implement
   }
-
-  // handle bidirectional edges by offsetting them
-  const allEdgesWithNodes = edges.value.filter((e) => e.from === edge.from || e.to === edge.from)
-  const isBidirectional = allEdgesWithNodes.length > 1
-  // at most two edges may share a node
-  const edgeIndex = allEdgesWithNodes.findIndex((e) => e.id === edge.id)
-  const isMinNode = edgeIndex === 0
 
   const x1 = fromRect.x + fromRect.width / 2
   const y1 = fromRect.y + fromRect.height / 2
@@ -231,8 +224,14 @@ const computeEdgeStyle = (edge: Edge) => {
   const unitX = distanceX / Math.sqrt(distanceX ** 2 + distanceY ** 2)
   const unitY = distanceY / Math.sqrt(distanceX ** 2 + distanceY ** 2)
 
+  // handle bidirectional edges by offsetting them
+  const ingoingNodeChildren = adjacencyMap.value.get(edge.to) ?? []
+  const outgoingNodeChildren = adjacencyMap.value.get(edge.from) ?? []
+
+  const isBidirectional = ingoingNodeChildren.includes(edge.from) && outgoingNodeChildren.includes(edge.to)
+
   if (isBidirectional) {
-    if (isMinNode) {
+    if (edge.from < edge.to) {
       return {
         line: {
           width: `${length}px`,
