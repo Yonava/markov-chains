@@ -74,49 +74,65 @@ const createAdjacencyMapSCC = (stronglyCoupledComponents: number[][], inputAdjac
   }
 }
 
+const lowestInPrimeFactorization = (num: number) => {
+  if (num === 1) {
+    return 1;
+  }
+  let divisor = 2;
+
+  while (num >= 2) {
+    if (num % divisor === 0) {
+      return divisor
+    }
+    divisor++;
+  }
+
+  return 1
+}
+
 const getPeriod = (component: number[], adjacencyMap: AdjacencyMap): number => {
-  const nodePeriods = component.map((node) => getPeriodBFS(node, adjacencyMap));
-  console.log(nodePeriods);
+  const periods = getPeriodBFS(component[0], adjacencyMap);
+
   // return the greatest common divisor of all the node periods
-  return nodePeriods.reduce((acc, curr) => {
+  const componentPeriod = periods.reduce((acc, curr) => {
     return greatestCommonDivisor(acc, curr);
-  }, nodePeriods[0]);
+  }, periods[0]);
+
+  return lowestInPrimeFactorization(componentPeriod);
 }
 
 // bfs until we reach the node we started at
-const getPeriodBFS = (startNode: number, adjacencyMap: AdjacencyMap): number => {
+const getPeriodBFS = (startNode: number, adjacencyMap: AdjacencyMap): number[] => {
 
-  console.log('starting at node', startNode)
-
-  if (adjacencyMap.get(startNode)?.includes(startNode)) {
-    return 1;
-  }
+  // 100 is a hard cap no matter what
+  const maxVisitations = Math.min(100, adjacencyMap.size^2)
 
   const queue = [...adjacencyMap.get(startNode)?.map((n) => [n, 1]) ?? []];
-  const visited = new Set<number>();
+  const visited = new Map<number, number>();
+
+  const stepsToStart = []
 
   while (queue.length > 0) {
-    // console.log(queue);
     const [node, steps] = queue.shift()!;
 
-    console.log('new level at node', node)
-
-    if (visited.has(node)) {
+    if (visited.get(node) === maxVisitations) {
       continue;
     }
 
     if (node === startNode) {
-      return steps;
+      stepsToStart.push(steps);
+      continue;
     }
 
-    visited.add(node);
+    const visitedEntry = visited.get(node);
+    visited.set(node, visitedEntry ? visitedEntry + 1 : 1)
 
     for (const child of adjacencyMap.get(node) ?? []) {
       queue.push([child, steps + 1]);
     }
   }
 
-  return 1;
+  return stepsToStart;
 }
 
 const greatestCommonDivisor = (a: number, b: number): number => {
