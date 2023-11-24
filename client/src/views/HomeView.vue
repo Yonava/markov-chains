@@ -109,7 +109,7 @@
         Strongly Coupled Components:
       </b>
       <div>
-        {{ stronglyCoupled }}
+        {{ stronglyCoupled.componentPeriodMap }}
       </div>
     </div>
 

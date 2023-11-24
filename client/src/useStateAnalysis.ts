@@ -74,6 +74,59 @@ const createAdjacencyMapSCC = (stronglyCoupledComponents: number[][], inputAdjac
   }
 }
 
+const getPeriod = (component: number[], adjacencyMap: AdjacencyMap): number => {
+  const nodePeriods = component.map((node) => getPeriodBFS(node, adjacencyMap));
+  console.log(nodePeriods);
+  // return the greatest common divisor of all the node periods
+  return nodePeriods.reduce((acc, curr) => {
+    return greatestCommonDivisor(acc, curr);
+  }, nodePeriods[0]);
+}
+
+// bfs until we reach the node we started at
+const getPeriodBFS = (startNode: number, adjacencyMap: AdjacencyMap): number => {
+
+  console.log('starting at node', startNode)
+
+  if (adjacencyMap.get(startNode)?.includes(startNode)) {
+    return 1;
+  }
+
+  const queue = [...adjacencyMap.get(startNode)?.map((n) => [n, 1]) ?? []];
+  const visited = new Set<number>();
+
+  while (queue.length > 0) {
+    // console.log(queue);
+    const [node, steps] = queue.shift()!;
+
+    console.log('new level at node', node)
+
+    if (visited.has(node)) {
+      continue;
+    }
+
+    if (node === startNode) {
+      return steps;
+    }
+
+    visited.add(node);
+
+    for (const child of adjacencyMap.get(node) ?? []) {
+      queue.push([child, steps + 1]);
+    }
+  }
+
+  return 1;
+}
+
+const greatestCommonDivisor = (a: number, b: number): number => {
+  if (b === 0) {
+    return a;
+  }
+  return greatestCommonDivisor(b, a % b);
+}
+
+
 export function useStateAnalysis(adjacencyMap: Ref<AdjacencyMap>) {
   return computed(() => {
     const {
@@ -93,10 +146,15 @@ export function useStateAnalysis(adjacencyMap: Ref<AdjacencyMap>) {
       }
     }
 
+    const componentPeriodMap = recurrentClasses.map((component) => {
+      return getPeriod(component, adjacencyMap.value);
+    })
+
     return {
       transientStates: transientStates.flat(),
       recurrentClasses,
       nodeToComponentMap,
+      componentPeriodMap,
     }
   })
 }
