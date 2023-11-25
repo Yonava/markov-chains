@@ -203,9 +203,35 @@ const addToEdgeAngleMap = (nodeId: number, edgeId: number, angle: number): void 
   }
 }
 
-const getOpenSpace = () => {
-  
+const getOpenSpace = (angles: {
+  edgeId: number,
+  angle: number,
+}[]): number => {
+  // all in degrees
+  if (angles.length === 0) return 0
+  if (angles.length === 1) return angles[0].angle + 90
+
+  let maxDifference = -Infinity
+  let averageAngle = 0
+
+
+  for (let i = 0; i < angles.length; i++) {
+    for (let j = i + 1; j < angles.length; j++) {
+      const currentAngle = angles[i].angle
+      const nextAngle = angles[j].angle
+      const difference = (nextAngle - currentAngle + 360) % 360 // Circular difference
+
+      if (difference > maxDifference) {
+        maxDifference = difference
+        // Calculate the circular average angle between the two angles
+        averageAngle = (currentAngle + difference / 2) % 360
+      }
+    }
+  }
+
+  return (averageAngle + 90) % 360 + 180
 }
+
 
 const currentNodeOnTop = ref<Number>(-1)
 
@@ -233,8 +259,10 @@ const computeEdgeStyle = (edge: Edge) => {
   let y2 = toRect.y + toRect.height / 2
 
   if (edge.from === edge.to) {
-    x2 = x1 + 500 * Math.cos(angledisplay.value)
-    y2 = y1 + 500 * Math.sin(angledisplay.value)
+    // gets point at distance at angle
+    const dist = 100
+    x2 = x1 + dist * Math.cos(angledisplay.value)
+    y2 = y1 + dist * Math.sin(angledisplay.value)
   }
 
   const radians = Math.atan2(y2 - y1, x2 - x1)
@@ -242,7 +270,7 @@ const computeEdgeStyle = (edge: Edge) => {
 
   if (edge.from !== edge.to) {
     addToEdgeAngleMap(edge.from, edge.id, angle)
-    addToEdgeAngleMap(edge.to, edge.id, -angle)
+    addToEdgeAngleMap(edge.to, edge.id, angle - 180)
   }
 
   const length = Math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
@@ -258,16 +286,10 @@ const computeEdgeStyle = (edge: Edge) => {
       distanceY,
     }
   }
-
-  const { distanceX, distanceY }  = calculatePerpendicularOffset(radians, 10)
-
-  const unitX = distanceX / Math.sqrt(distanceX ** 2 + distanceY ** 2)
-  const unitY = distanceY / Math.sqrt(distanceX ** 2 + distanceY ** 2)
-
-  const curveRadius = 25
-  const 
-
+  
   if (edge.from === edge.to) {
+    const curveRadius = 25
+    const openSpaceAngle = getOpenSpace(edgeAngleMap.value.get(edge.to) ?? [])
     return {
       line: {
         position: 'absolute',
@@ -277,7 +299,7 @@ const computeEdgeStyle = (edge: Edge) => {
         height: `${length}px`,
         'transform-origin': 'center 0',
         // 45 deg should become 50% of greatest angle between other edges
-        transform: `rotate(${angle}deg)`,
+        transform: `rotate(${openSpaceAngle}deg)`,
         'border-radius': `0 0 ${curveRadius}px ${curveRadius}px`,
         border: '8px solid rgb(17 24 39)',
         background: 'transparent',
@@ -293,7 +315,7 @@ const computeEdgeStyle = (edge: Edge) => {
       weight: {
         // 45 deg should become 50% of greatest angle between other edges
         'transform-origin': '0 0',
-        transform: `rotate(${-angle}deg) translate(${Math.cos(radians) * 10}px, ${-Math.cos(radians) * 60}px)`
+        transform: `rotate(${-openSpaceAngle}deg) translate(${Math.cos(radians) * 10}px, ${-Math.cos(radians) * 60}px)`
       }
     }
   }
@@ -303,6 +325,7 @@ const computeEdgeStyle = (edge: Edge) => {
   const outgoingNodeChildren = adjacencyMap.value.get(edge.from) ?? []
 
   const isBidirectional = ingoingNodeChildren.includes(edge.from) && outgoingNodeChildren.includes(edge.to)
+  const { distanceX, distanceY } = calculatePerpendicularOffset(radians, 10)
 
   if (isBidirectional) {
     if (edge.from < edge.to) {
@@ -352,6 +375,8 @@ const computeEdgeStyle = (edge: Edge) => {
     }
   }
 
+  const unitX = distanceX / Math.sqrt(distanceX ** 2 + distanceY ** 2)
+  const unitY = distanceY / Math.sqrt(distanceX ** 2 + distanceY ** 2)
   return {
     line: {
       width: `${length - 60}px`,
