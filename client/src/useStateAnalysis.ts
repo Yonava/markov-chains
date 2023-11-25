@@ -14,7 +14,6 @@ type Edge = {
   from: number
   to: number
   weight: number
-  isEditing: boolean
 }
 
 // node id -> list of child node ids
@@ -180,8 +179,6 @@ export function useStateAnalysis(nodes: Ref<Node[]>, edges: Ref<Edge[]>) {
   return computed(() => {
     const adjacencyMap = getAdjacencyMap(nodes.value, edges.value)
     const transitionMatrix = getTransitionMatrix(adjacencyMap, nodes.value)
-
-    getStateAfterNSteps(transitionMatrix, [1, 0, 0], 10)
 
     const {
       stronglyCoupledComponents: communicatingClasses,
