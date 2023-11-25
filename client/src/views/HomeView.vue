@@ -49,8 +49,9 @@
           :key="node.id"
         >
           <button
+            @mousedown="currentNodeOnTop = node.id"
             @mouseup="checkDeleteNode($event, node)"
-            :class="`fixed z-10 w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node)[1]"
+            :class="`fixed w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node)[1] + ' ' + (node.id === currentNodeOnTop ? 'z-50' : 'z-10')"
             :style="node.style + '; opacity:' + (node.style ? 1 : 0)"
             :ref="(el) => (node.ref = el)"
           >
@@ -74,15 +75,16 @@
               :style="computeEdgeStyle(edge).arrow"
             >
               <p
-                v-if="!edge.isEditing"
-                @dblclick="startEditing(edge)"
+                v-if="edge.id !== currentEdgeBeingEdited"
+                @dblclick="startEditing(edge.id)"
                 :style="computeEdgeStyle(edge).weight"
                 class="text-white"
               >{{ edge.weight }}</p>
               <input
                 v-else
-                @blur="stopEditing(edge)"
-                @keyup.enter="stopEditing(edge)"
+                @blur="stopEditing()"
+                @keyup.enter="stopEditing()"
+                :v-bind="edge.weight"
                 :style="computeEdgeStyle(edge).weight"
                 type="text"
                 v-model="edge.weight"
@@ -146,7 +148,6 @@ type Edge = {
   from: number
   to: number
   weight: number
-  isEditing: boolean
 }
 
 const nodesCreated = ref(0)
@@ -167,17 +168,20 @@ const addEdge = () => {
     from,
     to,
     weight: 1,
-    isEditing: false,
   }
 
   edges.value.push(edge)
 }
 
-const startEditing = (edge: Edge) => {
-  edge.isEditing = true;
+const currentNodeOnTop = ref<Number>(-1)
+
+const currentEdgeBeingEdited = ref<Number>(-1)
+
+const startEditing = (edgeId: number) => {
+  currentEdgeBeingEdited.value = edgeId
 }
-const stopEditing = (edge: Edge) => {
-  edge.isEditing = false;
+const stopEditing = () => {
+  currentEdgeBeingEdited.value = -1
 }
 
 const computeEdgeStyle = (edge: Edge) => {
@@ -188,11 +192,6 @@ const computeEdgeStyle = (edge: Edge) => {
 
   const fromRect = fromNode.ref.getBoundingClientRect()
   const toRect = toNode.ref.getBoundingClientRect()
-
-  // handle self-referencing states. they should go out a little and make a curved loop back
-  if (edge.from === edge.to) {
-    // TODO: implement
-  }
 
   const x1 = fromRect.x + fromRect.width / 2
   const y1 = fromRect.y + fromRect.height / 2
@@ -220,6 +219,39 @@ const computeEdgeStyle = (edge: Edge) => {
   const unitX = distanceX / Math.sqrt(distanceX ** 2 + distanceY ** 2)
   const unitY = distanceY / Math.sqrt(distanceX ** 2 + distanceY ** 2)
 
+  const curveRadius = 25
+
+  if (edge.from === edge.to) {
+    return {
+      line: {
+        position: 'absolute',
+        top: `${y1 - 190}px`,
+        left: `${x1}px`,
+        width: `${distanceY * 2 + 16}px`,
+        height: `100px`,
+        'transform-origin': '0 0',
+        // 45 deg should become 50% of greatest angle between other edges
+        transform: 'rotate(45deg)',
+        'border-radius': `${curveRadius}px ${curveRadius}px 0 0`,
+        border: '8px solid rgb(17 24 39)',
+        background: 'transparent',
+      },
+      arrow: {
+        width: 0,
+        height: 0,
+        transform: `translate(-26px, 26px)`,
+        'border-left': '20px solid transparent',
+        'border-right': '20px solid transparent',
+        'border-top': '20px solid rgb(17 24 39)',
+      },
+      weight: {
+        // 45 deg should become 50% of greatest angle between other edges
+        'transform-origin': '0 0',
+        transform: `rotate(${-1 * 45}deg) translate(${Math.cos(radians) * 10}px, ${-Math.cos(radians) * 60}px)`
+      }
+    }
+  }
+
   // handle bidirectional edges by offsetting them
   const ingoingNodeChildren = markov.value.adjacencyMap.get(edge.to) ?? []
   const outgoingNodeChildren = markov.value.adjacencyMap.get(edge.from) ?? []
@@ -230,7 +262,7 @@ const computeEdgeStyle = (edge: Edge) => {
     if (edge.from < edge.to) {
       return {
         line: {
-          width: `${length}px`,
+          width: `${length - 60}px`,
           height: '8px',
           transform: `rotate(${angle}deg)`,
           transformOrigin: `0 0`,
@@ -240,19 +272,19 @@ const computeEdgeStyle = (edge: Edge) => {
         arrow: {
           width: 0,
           height: 0,
-          transform: `translate(${length / 2 + 5}px, -16px)`,
+          transform: `translate(${length - 60}px, -16px)`,
           'border-top': '20px solid transparent',
           'border-bottom': '20px solid transparent',
           'border-left': '20px solid rgb(17 24 39)',
         },
         weight: {
-          transform: `rotate(${-1 * angle}deg) translate(${unitX * 20}px, ${unitY * 20}px)`
+          transform: `rotate(${-1 * angle}deg) translate(${-Math.cos(radians) * length / 3}px, ${-Math.sin(radians) * length / 3}px)`
         }
       }
     } else {
       return {
         line: {
-          width: `${length}px`,
+          width: `${length - 60}px`,
           height: '8px',
           transform: `rotate(${angle}deg)`,
           transformOrigin: `0 0`,
@@ -262,13 +294,13 @@ const computeEdgeStyle = (edge: Edge) => {
         arrow: {
           width: 0,
           height: 0,
-          transform: `translate(${length / 2 + 5}px, -16px)`,
+          transform: `translate(${length - 60}px, -16px)`,
           'border-top': '20px solid transparent',
           'border-bottom': '20px solid transparent',
           'border-left': '20px solid rgb(17 24 39)',
         },
         weight: {
-          transform: `rotate(${-1 * angle}deg) translate(${unitX * 20}px, ${unitY * 20}px)`
+          transform: `rotate(${-1 * angle}deg) translate(${-Math.cos(radians) * length / 3}px, ${-Math.sin(radians) * length / 3}px)`
         }
       }
     }
@@ -276,7 +308,7 @@ const computeEdgeStyle = (edge: Edge) => {
 
   return {
     line: {
-      width: `${length}px`,
+      width: `${length - 60}px`,
       height: '8px',
       transform: `rotate(${angle}deg)`,
       transformOrigin: '0 0',
@@ -286,13 +318,13 @@ const computeEdgeStyle = (edge: Edge) => {
     arrow: {
       width: 0,
       height: 0,
-      transform: `translate(${length/2}px, -16px)`,
+      transform: `translate(${length - 60}px, -16px)`,
       'border-top': '20px solid transparent',
       'border-bottom': '20px solid transparent',
       'border-left': '20px solid rgb(17 24 39)',
     },
     weight: {
-      transform: `rotate(${-1 * angle}deg) translate(${unitX * 20}px, ${unitY * 20}px)`
+      transform: `rotate(${-1 * angle}deg) translate(${-Math.cos(radians) * length / 3}px, ${-Math.sin(radians) * length / 3}px)`
     }
   }
 
