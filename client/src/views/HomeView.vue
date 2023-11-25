@@ -94,7 +94,7 @@
 
     </div>
 
-    <div
+    <!-- <div
       class="absolute top-0 left-0 z-50 text-white text-xl bg-red-500 p-4 opacity-75"
       style="pointer-events: none;"
     >
@@ -111,9 +111,9 @@
       <div>
         {{ steadyState }}
       </div>
-    </div>
+    </div> -->
 
-    <div
+    <!-- <div
       class="absolute top-0 right-0 text-white text-xl bg-blue-500 p-4 z-50 opacity-75"
       style="pointer-events: none;"
     >
@@ -128,16 +128,15 @@
           {{ cell.toFixed(2) }}
         </div>
       </div>
-    </div>
+    </div> -->
 
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, type ComponentPublicInstance } from 'vue'
+import { ref, type ComponentPublicInstance } from 'vue'
 import { useDraggable } from '@vueuse/core'
 import { useStateAnalysis } from '@/useStateAnalysis';
-import { useSteadyStateAnalysis } from '../useLinearAlgebra'
 
 type Node = {
   id: number
@@ -160,6 +159,8 @@ const nodesCreated = ref(0)
 
 const nodes = ref<Node[]>([])
 const edges = ref<Edge[]>([])
+
+const markov = useStateAnalysis(nodes, edges)
 
 const tEdgeInput = ref('')
 
@@ -226,8 +227,8 @@ const computeEdgeStyle = (edge: Edge) => {
   const unitY = distanceY / Math.sqrt(distanceX ** 2 + distanceY ** 2)
 
   // handle bidirectional edges by offsetting them
-  const ingoingNodeChildren = adjacencyMap.value.get(edge.to) ?? []
-  const outgoingNodeChildren = adjacencyMap.value.get(edge.from) ?? []
+  const ingoingNodeChildren = markov.value.adjacencyMap.get(edge.to) ?? []
+  const outgoingNodeChildren = markov.value.adjacencyMap.get(edge.from) ?? []
 
   const isBidirectional = ingoingNodeChildren.includes(edge.from) && outgoingNodeChildren.includes(edge.to)
 
@@ -358,34 +359,11 @@ const checkDeleteNode = (event: any, node: Node) => {
   }
 }
 
-const adjacencyMap = computed(() => nodes.value.reduce((acc, curr) => acc.set(
-  curr.id,
-  edges.value
-    .filter((edge) => edge.from === curr.id)
-    .map((edge) => edge.to)
-), new Map() as Map<number, number[]>))
-
-const transitionMatrix = computed(() => Array.from(adjacencyMap.value).reduce((acc, [node, children]) => {
-  // replace uniform weight with adjustable weights
-  const uniformWeight = 1 / children.length
-  const noChildMap = (n: Node) => n.id === node ? 1 : 0
-  const childMap = (n: Node) => children.includes(n.id) ? uniformWeight : 0
-  const row = children.length === 0
-    ? nodes.value.map(noChildMap)
-    : nodes.value.map(childMap)
-  acc.push(row)
-  return acc
-}, [] as number[][]))
-
-const steadyState = useSteadyStateAnalysis(transitionMatrix, 10)
-
-const stronglyCoupled = useStateAnalysis(adjacencyMap)
-
 const getColor = (node: Node) => {
 
-  const index = stronglyCoupled.value.nodeToComponentMap.get(node.id)
+  const index = markov.value.nodeToComponentMap.get(node.id)
 
-  if (stronglyCoupled.value.transientStates.includes(node.id)) return ['Gray', 'border-gray-900']
+  if (markov.value.transientStates.includes(node.id)) return ['Gray', 'border-gray-900']
   if (index === undefined) return ['Gray', 'border-gray-900']
 
   const colors = [
@@ -400,4 +378,4 @@ const getColor = (node: Node) => {
 
   return colors[index % colors.length]
 }
-</script>../useLinearAlgebra
+</script>

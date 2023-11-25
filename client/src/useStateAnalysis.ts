@@ -1,6 +1,21 @@
 // @ts-ignore
 import scc from 'strongly-connected-components';
 import { computed, type Ref } from 'vue';
+import { useSteadyStateAnalysis } from './useLinearAlgebra';
+
+type Node = {
+  id: number
+  style: any
+  children: number[]
+}
+
+type Edge = {
+  id: number
+  from: number
+  to: number
+  weight: number
+  isEditing: boolean
+}
 
 // node id -> list of child node ids
 type AdjacencyMap = Map<number, number[]>;
@@ -142,14 +157,36 @@ const greatestCommonDivisor = (a: number, b: number): number => {
   return greatestCommonDivisor(b, a % b);
 }
 
+const getAdjacencyMap = (nodes: Node[], edges: Edge[]) => nodes.reduce((acc, curr) => acc.set(
+  curr.id,
+  edges
+    .filter((edge) => edge.from === curr.id)
+    .map((edge) => edge.to)
+), new Map() as Map<number, number[]>)
 
-export function useStateAnalysis(adjacencyMap: Ref<AdjacencyMap>) {
+const getTransitionMatrix = (adjMap: AdjacencyMap, nodes: Node[]) => Array.from(adjMap).reduce((acc, [node, children]) => {
+  // replace uniform weight with adjustable weights
+  const uniformWeight = 1 / children.length
+  const noChildMap = (n: Node) => n.id === node ? 1 : 0
+  const childMap = (n: Node) => children.includes(n.id) ? uniformWeight : 0
+  const row = children.length === 0
+    ? nodes.map(noChildMap)
+    : nodes.map(childMap)
+  acc.push(row)
+  return acc
+}, [] as number[][])
+
+export function useStateAnalysis(nodes: Ref<Node[]>, edges: Ref<Edge[]>) {
   return computed(() => {
+
+    const adjacencyMap = getAdjacencyMap(nodes.value, edges.value)
+    const transitionMatrix = getTransitionMatrix(adjacencyMap, nodes.value)
+
     const {
       stronglyCoupledComponents,
       adjacencyMap: componentAdjacencyMap,
       nodeToComponentMap,
-    } = findStronglyCoupledComponents(adjacencyMap.value)
+    } = findStronglyCoupledComponents(adjacencyMap)
 
     const transientStates = []
     const recurrentClasses = []
@@ -163,7 +200,7 @@ export function useStateAnalysis(adjacencyMap: Ref<AdjacencyMap>) {
     }
 
     const componentPeriodMap = recurrentClasses.map((component) => {
-      return getPeriod(component, adjacencyMap.value);
+      return getPeriod(component, adjacencyMap);
     })
 
     return {
@@ -171,6 +208,8 @@ export function useStateAnalysis(adjacencyMap: Ref<AdjacencyMap>) {
       recurrentClasses,
       nodeToComponentMap,
       componentPeriodMap,
+      transitionMatrix,
+      adjacencyMap,
     }
   })
 }
