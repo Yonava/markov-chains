@@ -94,24 +94,18 @@
 
     </div>
 
-    <!-- <div
-      class="absolute top-0 left-0 z-50 text-white text-xl bg-red-500 p-4 opacity-75"
+    <div
+      class="absolute top-0 right-0 z-50 text-white text-xl bg-red-500 p-4 opacity-75"
       style="pointer-events: none;"
     >
-      <b>
-        Adjacency Map:
-      </b>
-      <br>
-      <div>
-        {{ adjacencyMap }}
+      <div v-for="(value, key) in markov">
+        <b>
+          {{ key }}:
+        </b>
+        <br>
+        {{ value }}
       </div>
-      <b>
-        Steady State:
-      </b>
-      <div>
-        {{ steadyState }}
-      </div>
-    </div> -->
+    </div>
 
     <!-- <div
       class="absolute top-0 right-0 text-white text-xl bg-blue-500 p-4 z-50 opacity-75"

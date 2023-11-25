@@ -1,25 +1,22 @@
 // @ts-ignore
 import linearAlgebra from 'linear-algebra';
-import { computed, type Ref } from 'vue';
 import BigNumber from 'bignumber.js';
 
 const { Matrix } = linearAlgebra();
 
-export function useSteadyStateAnalysis(transitionMatrix: Ref<number[][]>, precision: number) {
-  return computed(() => {
-    const numRows = transitionMatrix.value.length;
-    const inputMatrix = new Matrix(transitionMatrix.value).trans();
-    const identity = Matrix.identity(numRows)
+export function getSteadyStateVector(transitionMatrix: number[][], precision: number) {
+  const numRows = transitionMatrix.length;
+  const inputMatrix = new Matrix(transitionMatrix).trans();
+  const identity = Matrix.identity(numRows)
 
-    const { data: augmentedMatrix } = identity.minus(inputMatrix) as { data: number[][] }
+  const { data: augmentedMatrix } = identity.minus(inputMatrix) as { data: number[][] }
 
-    augmentedMatrix.forEach((row) => row.push(0));
-    augmentedMatrix.push(Array(numRows + 1).fill(1));
+  augmentedMatrix.forEach((row) => row.push(0));
+  augmentedMatrix.push(Array(numRows + 1).fill(1));
 
-    const solvedMatrix = runBigNumberRREF(augmentedMatrix, precision);
+  const solvedMatrix = runBigNumberRREF(augmentedMatrix, precision);
 
-    return new Matrix(solvedMatrix).trans().data.at(-1).slice(0, -1)
-  })
+  return new Matrix(solvedMatrix).trans().data.at(-1).slice(0, -1);
 }
 
 const findRREFBN = (matrix: BigNumber[][]) => {

@@ -1,7 +1,7 @@
 // @ts-ignore
 import scc from 'strongly-connected-components';
 import { computed, type Ref } from 'vue';
-import { useSteadyStateAnalysis } from './useLinearAlgebra';
+import { getSteadyStateVector } from './useLinearAlgebra';
 
 type Node = {
   id: number
@@ -120,7 +120,7 @@ const getPeriod = (component: number[], adjacencyMap: AdjacencyMap): number => {
 const getPeriodBFS = (startNode: number, adjacencyMap: AdjacencyMap): number[] => {
 
   // 100 is a hard cap no matter what
-  const maxVisitations = Math.min(100, adjacencyMap.size^2)
+  const maxVisitations = 100;
 
   const queue = [...adjacencyMap.get(startNode)?.map((n) => [n, 1]) ?? []];
   const visited = new Map<number, number>();
@@ -177,39 +177,51 @@ const getTransitionMatrix = (adjMap: AdjacencyMap, nodes: Node[]) => Array.from(
 }, [] as number[][])
 
 export function useStateAnalysis(nodes: Ref<Node[]>, edges: Ref<Edge[]>) {
+
   return computed(() => {
 
     const adjacencyMap = getAdjacencyMap(nodes.value, edges.value)
     const transitionMatrix = getTransitionMatrix(adjacencyMap, nodes.value)
 
     const {
-      stronglyCoupledComponents,
+      stronglyCoupledComponents: communicatingClasses,
       adjacencyMap: componentAdjacencyMap,
       nodeToComponentMap,
     } = findStronglyCoupledComponents(adjacencyMap)
 
-    const transientStates = []
+    const transientClasses = []
     const recurrentClasses = []
 
     for (const [node, children] of componentAdjacencyMap) {
       if (children.length === 0) {
-        recurrentClasses.push(stronglyCoupledComponents[node])
+        recurrentClasses.push(communicatingClasses[node])
       } else {
-        transientStates.push(stronglyCoupledComponents[node])
+        transientClasses.push(communicatingClasses[node])
       }
     }
 
-    const componentPeriodMap = recurrentClasses.map((component) => {
+    const transientStates = transientClasses.flat()
+
+    const componentPeriods = recurrentClasses.map((component) => {
       return getPeriod(component, adjacencyMap);
     })
 
+    let steadyStateVector = 'No Unique Steady State'
+    // unique steady state distribution only exists if there is one aperiodic recurrent class
+    if (recurrentClasses.length === 1 && componentPeriods[0] === 1) {
+      const steadyStateVectorPrecision = 3
+      steadyStateVector = getSteadyStateVector(transitionMatrix, steadyStateVectorPrecision)
+    }
+
     return {
-      transientStates: transientStates.flat(),
+      transientStates,
       recurrentClasses,
+      communicatingClasses,
       nodeToComponentMap,
-      componentPeriodMap,
+      componentPeriods,
       transitionMatrix,
       adjacencyMap,
+      steadyStateVector
     }
   })
 }
