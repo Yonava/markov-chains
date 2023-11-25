@@ -93,8 +93,8 @@
           </div>
         </div>
       </div>
-
     </div>
+
 
     <div
       class="absolute top-0 left-0 z-50 text-white text-xl bg-red-500 p-4 opacity-75"
@@ -139,6 +139,8 @@
 import { ref, computed, type ComponentPublicInstance } from 'vue'
 import { useDraggable } from '@vueuse/core'
 import { useStateAnalysis } from '@/useStateAnalysis';
+
+const angledisplay = ref(0)
 
 type Node = {
   id: number
@@ -199,8 +201,11 @@ const computeEdgeStyle = (edge: Edge) => {
 
   const x1 = fromRect.x + fromRect.width / 2
   const y1 = fromRect.y + fromRect.height / 2
-  const x2 = toRect.x + toRect.width / 2
-  const y2 = toRect.y + toRect.height / 2
+  // const x2 = toRect.x + toRect.width / 2
+  // const y2 = toRect.y + toRect.height / 2
+
+  const x2 = x1 + 500 * Math.cos(angledisplay.value)
+  const y2 = y1 + 500 * Math.sin(angledisplay.value)
 
   const radians = Math.atan2(y2 - y1, x2 - x1)
   const angle = radians * (180 / Math.PI)
@@ -229,14 +234,14 @@ const computeEdgeStyle = (edge: Edge) => {
     return {
       line: {
         position: 'absolute',
-        top: `${y1 - 190}px`,
-        left: `${x1}px`,
-        width: `${distanceY * 2 + 16}px`,
-        height: `100px`,
-        'transform-origin': '0 0',
+        top: `${y1 - 132}px`,
+        left: `${x1 - 68}px`,
+        width: `${40}px`,
+        height: `${length}px`,
+        'transform-origin': 'center 0',
         // 45 deg should become 50% of greatest angle between other edges
-        transform: 'rotate(45deg)',
-        'border-radius': `${curveRadius}px ${curveRadius}px 0 0`,
+        transform: `rotate(${angle}deg)`,
+        'border-radius': `0 0 ${curveRadius}px ${curveRadius}px`,
         border: '8px solid rgb(17 24 39)',
         background: 'transparent',
       },
@@ -251,7 +256,7 @@ const computeEdgeStyle = (edge: Edge) => {
       weight: {
         // 45 deg should become 50% of greatest angle between other edges
         'transform-origin': '0 0',
-        transform: `rotate(${-1 * 45}deg) translate(${Math.cos(radians) * 10}px, ${-Math.cos(radians) * 60}px)`
+        transform: `rotate(${-angle}deg) translate(${Math.cos(radians) * 10}px, ${-Math.cos(radians) * 60}px)`
       }
     }
   }
