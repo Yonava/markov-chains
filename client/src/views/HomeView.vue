@@ -231,6 +231,7 @@ const computeEdgeStyle = (edge: Edge) => {
         width: `${distanceY * 2 + 16}px`,
         height: `100px`,
         'transform-origin': '0 0',
+        // 45 deg should become 50% of greatest angle between other edges
         transform: 'rotate(45deg)',
         'border-radius': `${curveRadius}px ${curveRadius}px 0 0`,
         border: '8px solid rgb(17 24 39)',
@@ -239,13 +240,15 @@ const computeEdgeStyle = (edge: Edge) => {
       arrow: {
         width: 0,
         height: 0,
-        transform: `translate(0, -26px)`,
-        'border-top': '20px solid transparent',
-        'border-bottom': '20px solid transparent',
-        'border-left': '20px solid rgb(17 24 39)',
+        transform: `translate(-26px, 26px)`,
+        'border-left': '20px solid transparent',
+        'border-right': '20px solid transparent',
+        'border-top': '20px solid rgb(17 24 39)',
       },
       weight: {
-        transform: `rotate(${-1 * 45}deg) translate(${unitX * 20}px, ${unitY * 20}px)`
+        // 45 deg should become 50% of greatest angle between other edges
+        'transform-origin': '0 0',
+        transform: `rotate(${-1 * 45}deg) translate(${Math.cos(radians) * 10}px, ${-Math.cos(radians) * 60}px)`
       }
     }
   }
