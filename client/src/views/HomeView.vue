@@ -106,10 +106,10 @@
         {{ adjacencyMap }}
       </div>
       <b>
-        Strongly Coupled Components:
+        Steady State:
       </b>
       <div>
-        {{ stronglyCoupled.componentPeriodMap }}
+        {{ steadyState }}
       </div>
     </div>
 
@@ -137,7 +137,7 @@
 import { ref, computed, type ComponentPublicInstance } from 'vue'
 import { useDraggable } from '@vueuse/core'
 import { useStateAnalysis } from '@/useStateAnalysis';
-import '../linearAlgebra'
+import { useSteadyStateAnalysis } from '../useLinearAlgebra'
 
 type Node = {
   id: number
@@ -377,6 +377,8 @@ const transitionMatrix = computed(() => Array.from(adjacencyMap.value).reduce((a
   return acc
 }, [] as number[][]))
 
+const steadyState = useSteadyStateAnalysis(transitionMatrix)
+
 const stronglyCoupled = useStateAnalysis(adjacencyMap)
 
 const getColor = (node: Node) => {
@@ -398,4 +400,4 @@ const getColor = (node: Node) => {
 
   return colors[index % colors.length]
 }
-</script>
+</script>../useLinearAlgebra
