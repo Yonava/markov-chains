@@ -84,7 +84,7 @@
                 v-else
                 @blur="stopEditing()"
                 @keyup.enter="stopEditing()"
-                :v-bind="edge.weight"
+                :v-model="edge.weight"
                 :style="computeEdgeStyle(edge).weight"
                 type="text"
                 v-model="edge.weight"
@@ -145,7 +145,6 @@ const angledisplay = ref(0)
 type Node = {
   id: number
   style: any
-  children: number[]
   // useDraggable throws error if HTMLElement is not passed,
   // but vue3 throws error when not using ComponentPublicInstance... wtf!
   ref: Element | ComponentPublicInstance | null | any
@@ -179,6 +178,35 @@ const addEdge = () => {
   edges.value.push(edge)
 }
 
+const edgeAngleMap = ref(new Map<number, {
+  edgeId: number,
+  angle: number,
+}[]>())
+
+const addToEdgeAngleMap = (nodeId: number, edgeId: number, angle: number): void => {
+  // check if node in map
+  // if no, add it
+  // if yes check if edge id in  list
+  // if yes, update
+  // if no, add it
+  
+  const currentNode = edgeAngleMap.value.get(nodeId) || []
+
+  if (currentNode.find(edge => edge.edgeId === edgeId) === undefined) {
+    edgeAngleMap.value.set(nodeId, [...currentNode, {
+      edgeId: edgeId,
+      angle: angle
+    }])
+  } else {
+    const index = currentNode.findIndex(edge => edge.edgeId === edgeId);
+    if (index !== -1) currentNode[index].angle = angle
+  }
+}
+
+const getOpenSpace = () => {
+  
+}
+
 const currentNodeOnTop = ref<Number>(-1)
 
 const currentEdgeBeingEdited = ref<Number>(-1)
@@ -201,16 +229,24 @@ const computeEdgeStyle = (edge: Edge) => {
 
   const x1 = fromRect.x + fromRect.width / 2
   const y1 = fromRect.y + fromRect.height / 2
-  // const x2 = toRect.x + toRect.width / 2
-  // const y2 = toRect.y + toRect.height / 2
+  let x2 = toRect.x + toRect.width / 2
+  let y2 = toRect.y + toRect.height / 2
 
-  const x2 = x1 + 500 * Math.cos(angledisplay.value)
-  const y2 = y1 + 500 * Math.sin(angledisplay.value)
+  if (edge.from === edge.to) {
+    x2 = x1 + 500 * Math.cos(angledisplay.value)
+    y2 = y1 + 500 * Math.sin(angledisplay.value)
+  }
 
   const radians = Math.atan2(y2 - y1, x2 - x1)
   const angle = radians * (180 / Math.PI)
 
+  if (edge.from !== edge.to) {
+    addToEdgeAngleMap(edge.from, edge.id, angle)
+    addToEdgeAngleMap(edge.to, edge.id, -angle)
+  }
+
   const length = Math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+
 
   const calculatePerpendicularOffset = (angle: number, lineSeparation: number) => {
     const perpendicularAngle = angle + Math.PI / 2
@@ -229,6 +265,7 @@ const computeEdgeStyle = (edge: Edge) => {
   const unitY = distanceY / Math.sqrt(distanceX ** 2 + distanceY ** 2)
 
   const curveRadius = 25
+  const 
 
   if (edge.from === edge.to) {
     return {
@@ -346,7 +383,6 @@ const addNode = async () => {
   const node: Node = {
     id: nodesCreated.value++,
     style: null,
-    children: [],
     ref: null,
   }
 
