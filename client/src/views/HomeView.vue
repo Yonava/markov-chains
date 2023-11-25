@@ -263,7 +263,7 @@ const computeEdgeStyle = (edge: Edge) => {
     if (edge.from < edge.to) {
       return {
         line: {
-          width: `${length- 60}px`,
+          width: `${length - 60}px`,
           height: '8px',
           transform: `rotate(${angle}deg)`,
           transformOrigin: `0 0`,
