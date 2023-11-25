@@ -49,8 +49,9 @@
           :key="node.id"
         >
           <button
+            @mousedown="currentNodeOnTop = node.id"
             @mouseup="checkDeleteNode($event, node)"
-            :class="`fixed z-10 w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node)"
+            :class="`fixed w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node) + ' ' + (node.id === currentNodeOnTop ? 'z-50' : 'z-10')"
             :style="node.style + '; opacity:' + (node.style ? 1 : 0)"
             :ref="(el) => (node.ref = el)"
           >
@@ -175,6 +176,8 @@ const addEdge = () => {
 
   edges.value.push(edge)
 }
+
+const currentNodeOnTop = ref<Number>(-1)
 
 const currentEdgeBeingEdited = ref<Number>(-1)
 
