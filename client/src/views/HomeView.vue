@@ -50,7 +50,7 @@
         >
           <button
             @mouseup="checkDeleteNode($event, node)"
-            :class="`fixed z-10 w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node)"
+            :class="`fixed z-10 w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node)[1]"
             :style="node.style + '; opacity:' + (node.style ? 1 : 0)"
             :ref="(el) => (node.ref = el)"
           >
@@ -137,6 +137,7 @@
 import { ref, computed, type ComponentPublicInstance } from 'vue'
 import { useDraggable } from '@vueuse/core'
 import { useStateAnalysis } from '@/useStateAnalysis';
+import '../linearAlgebra'
 
 type Node = {
   id: number
@@ -382,17 +383,17 @@ const getColor = (node: Node) => {
 
   const index = stronglyCoupled.value.nodeToComponentMap.get(node.id)
 
-  if (stronglyCoupled.value.transientStates.includes(node.id)) return 'border-gray-900'
-  if (index === undefined) return 'bg-gray-900'
+  if (stronglyCoupled.value.transientStates.includes(node.id)) return ['Gray', 'border-gray-900']
+  if (index === undefined) return ['Gray', 'border-gray-900']
 
   const colors = [
-    'border-red-500',
-    'border-yellow-500',
-    'border-green-500',
-    'border-blue-500',
-    'border-indigo-500',
-    'border-purple-500',
-    'border-pink-500',
+    ['Red', 'border-red-500'],
+    ['Orange', 'border-yellow-500'],
+    ['Green', 'border-green-500'],
+    ['Blue', 'border-blue-500'],
+    ['Indigo', 'border-indigo-500'],
+    ['Purple', 'border-purple-500'],
+    ['Pink', 'border-pink-500'],
   ]
 
   return colors[index % colors.length]

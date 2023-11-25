@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "linear-algebra": "^3.1.4",
+    "rref": "^0.0.1"
+  }
+}
