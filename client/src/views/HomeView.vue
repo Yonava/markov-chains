@@ -377,7 +377,7 @@ const transitionMatrix = computed(() => Array.from(adjacencyMap.value).reduce((a
   return acc
 }, [] as number[][]))
 
-const steadyState = useSteadyStateAnalysis(transitionMatrix)
+const steadyState = useSteadyStateAnalysis(transitionMatrix, 10)
 
 const stronglyCoupled = useStateAnalysis(adjacencyMap)
 
