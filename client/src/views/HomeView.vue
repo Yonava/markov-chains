@@ -194,11 +194,6 @@ const computeEdgeStyle = (edge: Edge) => {
   const fromRect = fromNode.ref.getBoundingClientRect()
   const toRect = toNode.ref.getBoundingClientRect()
 
-  // handle self-referencing states. they should go out a little and make a curved loop back
-  if (edge.from === edge.to) {
-    // TODO: implement
-  }
-
   const x1 = fromRect.x + fromRect.width / 2
   const y1 = fromRect.y + fromRect.height / 2
   const x2 = toRect.x + toRect.width / 2
@@ -224,6 +219,36 @@ const computeEdgeStyle = (edge: Edge) => {
 
   const unitX = distanceX / Math.sqrt(distanceX ** 2 + distanceY ** 2)
   const unitY = distanceY / Math.sqrt(distanceX ** 2 + distanceY ** 2)
+
+  const curveRadius = 25
+
+  if (edge.from === edge.to) {
+    return {
+      line: {
+        position: 'absolute',
+        top: `${y1 - 190}px`,
+        left: `${x1}px`,
+        width: `${distanceY * 2 + 16}px`,
+        height: `100px`,
+        'transform-origin': '0 0',
+        transform: 'rotate(45deg)',
+        'border-radius': `${curveRadius}px ${curveRadius}px 0 0`,
+        border: '8px solid rgb(17 24 39)',
+        background: 'transparent',
+      },
+      arrow: {
+        width: 0,
+        height: 0,
+        transform: `translate(0, -26px)`,
+        'border-top': '20px solid transparent',
+        'border-bottom': '20px solid transparent',
+        'border-left': '20px solid rgb(17 24 39)',
+      },
+      weight: {
+        transform: `rotate(${-1 * 45}deg) translate(${unitX * 20}px, ${unitY * 20}px)`
+      }
+    }
+  }
 
   // handle bidirectional edges by offsetting them
   const ingoingNodeChildren = adjacencyMap.value.get(edge.to) ?? []
@@ -281,7 +306,7 @@ const computeEdgeStyle = (edge: Edge) => {
 
   return {
     line: {
-      width: `${length}px`,
+      width: `${length - 60}px`,
       height: '8px',
       transform: `rotate(${angle}deg)`,
       transformOrigin: '0 0',
@@ -291,7 +316,7 @@ const computeEdgeStyle = (edge: Edge) => {
     arrow: {
       width: 0,
       height: 0,
-      transform: `translate(${length/2}px, -16px)`,
+      transform: `translate(${length - 60}px, -16px)`,
       'border-top': '20px solid transparent',
       'border-bottom': '20px solid transparent',
       'border-left': '20px solid rgb(17 24 39)',
