@@ -51,7 +51,7 @@
           <button
             @mousedown="currentNodeOnTop = node.id"
             @mouseup="checkDeleteNode($event, node)"
-            :class="`fixed w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node) + ' ' + (node.id === currentNodeOnTop ? 'z-50' : 'z-10')"
+            :class="`fixed w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node)[1] + ' ' + (node.id === currentNodeOnTop ? 'z-50' : 'z-10')"
             :style="node.style + '; opacity:' + (node.style ? 1 : 0)"
             :ref="(el) => (node.ref = el)"
           >
@@ -97,25 +97,19 @@
     </div>
 
     <div
-      class="absolute top-0 left-0 z-50 text-white text-xl bg-red-500 p-4 opacity-75"
+      class="absolute top-0 right-0 z-50 text-white text-xl bg-red-500 p-4 opacity-75"
       style="pointer-events: none;"
     >
-      <b>
-        Adjacency Map:
-      </b>
-      <br>
-      <div>
-        {{ adjacencyMap }}
-      </div>
-      <b>
-        Strongly Coupled Components:
-      </b>
-      <div>
-        {{ stronglyCoupled }}
+      <div v-for="(value, key) in markov">
+        <b>
+          {{ key }}:
+        </b>
+        <br>
+        {{ value }}
       </div>
     </div>
 
-    <div
+    <!-- <div
       class="absolute top-0 right-0 text-white text-xl bg-blue-500 p-4 z-50 opacity-75"
       style="pointer-events: none;"
     >
@@ -130,13 +124,13 @@
           {{ cell.toFixed(2) }}
         </div>
       </div>
-    </div>
+    </div> -->
 
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, type ComponentPublicInstance } from 'vue'
+import { ref, type ComponentPublicInstance } from 'vue'
 import { useDraggable } from '@vueuse/core'
 import { useStateAnalysis } from '@/useStateAnalysis';
 
@@ -160,6 +154,8 @@ const nodesCreated = ref(0)
 
 const nodes = ref<Node[]>([])
 const edges = ref<Edge[]>([])
+
+const markov = useStateAnalysis(nodes, edges)
 
 const tEdgeInput = ref('')
 
@@ -257,8 +253,8 @@ const computeEdgeStyle = (edge: Edge) => {
   }
 
   // handle bidirectional edges by offsetting them
-  const ingoingNodeChildren = adjacencyMap.value.get(edge.to) ?? []
-  const outgoingNodeChildren = adjacencyMap.value.get(edge.from) ?? []
+  const ingoingNodeChildren = markov.value.adjacencyMap.get(edge.to) ?? []
+  const outgoingNodeChildren = markov.value.adjacencyMap.get(edge.from) ?? []
 
   const isBidirectional = ingoingNodeChildren.includes(edge.from) && outgoingNodeChildren.includes(edge.to)
 
@@ -389,42 +385,21 @@ const checkDeleteNode = (event: any, node: Node) => {
   }
 }
 
-const adjacencyMap = computed(() => nodes.value.reduce((acc, curr) => acc.set(
-  curr.id,
-  edges.value
-    .filter((edge) => edge.from === curr.id)
-    .map((edge) => edge.to)
-), new Map() as Map<number, number[]>))
-
-const transitionMatrix = computed(() => Array.from(adjacencyMap.value).reduce((acc, [node, children]) => {
-  // replace uniform weight with adjustable weights
-  const uniformWeight = 1 / children.length
-  const noChildMap = (n: Node) => n.id === node ? 1 : 0
-  const childMap = (n: Node) => children.includes(n.id) ? uniformWeight : 0
-  const row = children.length === 0
-    ? nodes.value.map(noChildMap)
-    : nodes.value.map(childMap)
-  acc.push(row)
-  return acc
-}, [] as number[][]))
-
-const stronglyCoupled = useStateAnalysis(adjacencyMap)
-
 const getColor = (node: Node) => {
 
-  const index = stronglyCoupled.value.nodeToComponentMap.get(node.id)
+  const index = markov.value.nodeToComponentMap.get(node.id)
 
-  if (stronglyCoupled.value.transientStates.includes(node.id)) return 'border-gray-900'
-  if (index === undefined) return 'bg-gray-900'
+  if (markov.value.transientStates.includes(node.id)) return ['Gray', 'border-gray-900']
+  if (index === undefined) return ['Gray', 'border-gray-900']
 
   const colors = [
-    'border-red-500',
-    'border-yellow-500',
-    'border-green-500',
-    'border-blue-500',
-    'border-indigo-500',
-    'border-purple-500',
-    'border-pink-500',
+    ['Red', 'border-red-500'],
+    ['Orange', 'border-yellow-500'],
+    ['Green', 'border-green-500'],
+    ['Blue', 'border-blue-500'],
+    ['Indigo', 'border-indigo-500'],
+    ['Purple', 'border-purple-500'],
+    ['Pink', 'border-pink-500'],
   ]
 
   return colors[index % colors.length]

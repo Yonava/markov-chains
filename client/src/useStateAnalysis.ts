@@ -1,6 +1,21 @@
 // @ts-ignore
 import scc from 'strongly-connected-components';
 import { computed, type Ref } from 'vue';
+import { getSteadyStateVector } from './useLinearAlgebra';
+
+type Node = {
+  id: number
+  style: any
+  children: number[]
+}
+
+type Edge = {
+  id: number
+  from: number
+  to: number
+  weight: number
+  isEditing: boolean
+}
 
 // node id -> list of child node ids
 type AdjacencyMap = Map<number, number[]>;
@@ -74,29 +89,140 @@ const createAdjacencyMapSCC = (stronglyCoupledComponents: number[][], inputAdjac
   }
 }
 
-export function useStateAnalysis(adjacencyMap: Ref<AdjacencyMap>) {
+const lowestInPrimeFactorization = (num: number) => {
+  if (num === 1) {
+    return 1;
+  }
+  let divisor = 2;
+
+  while (num >= 2) {
+    if (num % divisor === 0) {
+      return divisor
+    }
+    divisor++;
+  }
+
+  return 1
+}
+
+const getPeriod = (component: number[], adjacencyMap: AdjacencyMap): number => {
+  const periods = getPeriodBFS(component[0], adjacencyMap);
+
+  // return the greatest common divisor of all the node periods
+  const componentPeriod = periods.reduce((acc, curr) => {
+    return greatestCommonDivisor(acc, curr);
+  }, periods[0]);
+
+  return lowestInPrimeFactorization(componentPeriod);
+}
+
+// bfs until we reach the node we started at
+const getPeriodBFS = (startNode: number, adjacencyMap: AdjacencyMap): number[] => {
+
+  const maxVisitations = 100;
+
+  const queue = [...adjacencyMap.get(startNode)?.map((n) => [n, 1]) ?? []];
+  const visited = new Map<number, number>();
+
+  const stepsToStart = []
+
+  while (queue.length > 0) {
+    const [node, steps] = queue.shift()!;
+
+    if (visited.get(node) === maxVisitations) {
+      continue;
+    }
+
+    if (node === startNode) {
+      stepsToStart.push(steps);
+      continue;
+    }
+
+    const visitedEntry = visited.get(node);
+    visited.set(node, visitedEntry ? visitedEntry + 1 : 1)
+
+    for (const child of adjacencyMap.get(node) ?? []) {
+      queue.push([child, steps + 1]);
+    }
+  }
+
+  return stepsToStart;
+}
+
+const greatestCommonDivisor = (a: number, b: number): number => {
+  if (b === 0) {
+    return a;
+  }
+  return greatestCommonDivisor(b, a % b);
+}
+
+const getAdjacencyMap = (nodes: Node[], edges: Edge[]) => nodes.reduce((acc, curr) => acc.set(
+  curr.id,
+  edges
+    .filter((edge) => edge.from === curr.id)
+    .map((edge) => edge.to)
+), new Map() as Map<number, number[]>)
+
+const getTransitionMatrix = (adjMap: AdjacencyMap, nodes: Node[]) => Array.from(adjMap).reduce((acc, [node, children]) => {
+  // replace uniform weight with adjustable weights
+  const uniformWeight = 1 / children.length
+  const noChildMap = (n: Node) => n.id === node ? 1 : 0
+  const childMap = (n: Node) => children.includes(n.id) ? uniformWeight : 0
+  const row = children.length === 0
+    ? nodes.map(noChildMap)
+    : nodes.map(childMap)
+  acc.push(row)
+  return acc
+}, [] as number[][])
+
+export function useStateAnalysis(nodes: Ref<Node[]>, edges: Ref<Edge[]>) {
+
   return computed(() => {
+
+    console.log('computing state analysis')
+
+    const adjacencyMap = getAdjacencyMap(nodes.value, edges.value)
+    const transitionMatrix = getTransitionMatrix(adjacencyMap, nodes.value)
+
     const {
-      stronglyCoupledComponents,
+      stronglyCoupledComponents: communicatingClasses,
       adjacencyMap: componentAdjacencyMap,
       nodeToComponentMap,
-    } = findStronglyCoupledComponents(adjacencyMap.value)
+    } = findStronglyCoupledComponents(adjacencyMap)
 
-    const transientStates = []
+    const transientClasses = []
     const recurrentClasses = []
 
     for (const [node, children] of componentAdjacencyMap) {
       if (children.length === 0) {
-        recurrentClasses.push(stronglyCoupledComponents[node])
+        recurrentClasses.push(communicatingClasses[node])
       } else {
-        transientStates.push(stronglyCoupledComponents[node])
+        transientClasses.push(communicatingClasses[node])
       }
     }
 
+    const transientStates = transientClasses.flat()
+
+    const componentPeriods = recurrentClasses.map((component) => {
+      return getPeriod(component, adjacencyMap);
+    })
+
+    let steadyStateVector = 'No Unique Steady State'
+    // unique steady state distribution only exists if there is one aperiodic recurrent class
+    if (recurrentClasses.length === 1 && componentPeriods[0] === 1) {
+      const steadyStateVectorPrecision = 3
+      steadyStateVector = getSteadyStateVector(transitionMatrix, steadyStateVectorPrecision)
+    }
+
     return {
-      transientStates: transientStates.flat(),
+      transientStates,
       recurrentClasses,
+      communicatingClasses,
       nodeToComponentMap,
+      componentPeriods,
+      transitionMatrix,
+      adjacencyMap,
+      steadyStateVector
     }
   })
 }

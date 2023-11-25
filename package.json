@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "bignumber.js": "^9.1.2",
+    "eventemitter2": "^6.4.9",
+    "linear-algebra": "^3.1.4",
+    "na-gaussian-elimination": "^1.0.0",
+    "rref": "^0.0.1"
+  }
+}
