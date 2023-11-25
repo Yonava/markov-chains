@@ -119,7 +119,6 @@ const getPeriod = (component: number[], adjacencyMap: AdjacencyMap): number => {
 // bfs until we reach the node we started at
 const getPeriodBFS = (startNode: number, adjacencyMap: AdjacencyMap): number[] => {
 
-  // 100 is a hard cap no matter what
   const maxVisitations = 100;
 
   const queue = [...adjacencyMap.get(startNode)?.map((n) => [n, 1]) ?? []];
@@ -179,6 +178,8 @@ const getTransitionMatrix = (adjMap: AdjacencyMap, nodes: Node[]) => Array.from(
 export function useStateAnalysis(nodes: Ref<Node[]>, edges: Ref<Edge[]>) {
 
   return computed(() => {
+
+    console.log('computing state analysis')
 
     const adjacencyMap = getAdjacencyMap(nodes.value, edges.value)
     const transitionMatrix = getTransitionMatrix(adjacencyMap, nodes.value)
