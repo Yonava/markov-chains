@@ -260,7 +260,7 @@ const computeEdgeStyle = (edge: Edge) => {
     if (edge.from < edge.to) {
       return {
         line: {
-          width: `${length}px`,
+          width: `${length- 60}px`,
           height: '8px',
           transform: `rotate(${angle}deg)`,
           transformOrigin: `0 0`,
@@ -270,19 +270,19 @@ const computeEdgeStyle = (edge: Edge) => {
         arrow: {
           width: 0,
           height: 0,
-          transform: `translate(${length / 2 + 5}px, -16px)`,
+          transform: `translate(${length - 60}px, -16px)`,
           'border-top': '20px solid transparent',
           'border-bottom': '20px solid transparent',
           'border-left': '20px solid rgb(17 24 39)',
         },
         weight: {
-          transform: `rotate(${-1 * angle}deg) translate(${unitX * 20}px, ${unitY * 20}px)`
+          transform: `rotate(${-1 * angle}deg) translate(${-Math.cos(radians) * length / 3}px, ${-Math.sin(radians) * length / 3}px)`
         }
       }
     } else {
       return {
         line: {
-          width: `${length}px`,
+          width: `${length - 60}px`,
           height: '8px',
           transform: `rotate(${angle}deg)`,
           transformOrigin: `0 0`,
@@ -292,13 +292,13 @@ const computeEdgeStyle = (edge: Edge) => {
         arrow: {
           width: 0,
           height: 0,
-          transform: `translate(${length / 2 + 5}px, -16px)`,
+          transform: `translate(${length - 60}px, -16px)`,
           'border-top': '20px solid transparent',
           'border-bottom': '20px solid transparent',
           'border-left': '20px solid rgb(17 24 39)',
         },
         weight: {
-          transform: `rotate(${-1 * angle}deg) translate(${unitX * 20}px, ${unitY * 20}px)`
+          transform: `rotate(${-1 * angle}deg) translate(${-Math.cos(radians) * length / 3}px, ${-Math.sin(radians) * length / 3}px)`
         }
       }
     }
@@ -322,7 +322,7 @@ const computeEdgeStyle = (edge: Edge) => {
       'border-left': '20px solid rgb(17 24 39)',
     },
     weight: {
-      transform: `rotate(${-1 * angle}deg) translate(${unitX * 20}px, ${unitY * 20}px)`
+      transform: `rotate(${-1 * angle}deg) translate(${-Math.cos(radians) * length / 3}px, ${-Math.sin(radians) * length / 3}px)`
     }
   }
 
