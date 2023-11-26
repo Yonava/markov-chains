@@ -110,7 +110,7 @@
                 v-else
                 @blur="stopEditing()"
                 @keyup.enter="stopEditing()"
-                :v-bind="edge.weight"
+                :v-model="edge.weight"
                 :style="computeEdgeStyle(edge).weight"
                 type="text"
                 v-model.number="edge.weight"
@@ -119,11 +119,8 @@
           </div>
         </div>
       </div>
-
     </div>
-
     <DebugScreen :markov="markov" />
-
   </div>
 </template>
 
@@ -134,10 +131,11 @@ import { useStateAnalysis } from '@/useStateAnalysis';
 import { getStateAfterNSteps } from '@/useLinearAlgebra';
 import DebugScreen from '@/components/DebugScreen.vue';
 
+const angledisplay = ref(0)
+
 type Node = {
   id: number
   style: any
-  children: number[]
   // useDraggable throws error if HTMLElement is not passed,
   // but vue3 throws error when not using ComponentPublicInstance... wtf!
   ref: Element | ComponentPublicInstance | null | any
@@ -176,6 +174,67 @@ const addEdge = () => {
   edges.value.push(edge)
 }
 
+const edgeAngleMap = ref(new Map<number, {
+  edgeId: number,
+  angle: number,
+}[]>())
+
+const addToEdgeAngleMap = (nodeId: number, edgeId: number, angle: number): void => {
+  // check if node in map
+  // if no, add it
+  // if yes check if edge id in  list
+  // if yes, update
+  // if no, add it
+  
+  const currentNode = edgeAngleMap.value.get(nodeId) || []
+
+  if (currentNode.find(edge => edge.edgeId === edgeId) === undefined) {
+    edgeAngleMap.value.set(nodeId, [...currentNode, {
+      edgeId: edgeId,
+      angle: angle
+    }])
+  } else {
+    const index = currentNode.findIndex(edge => edge.edgeId === edgeId);
+    if (index !== -1) currentNode[index].angle = angle
+  }
+}
+
+const deleteFromEdgeAngleMap = (nodeId: number) => {
+  edgeAngleMap.value.delete(nodeId);
+}
+
+const getOpenSpace = (angles: {
+  edgeId: number,
+  angle: number,
+}[]): number => {
+  // does not work for more than 2 edges
+
+  // all in degrees
+  if (angles.length === 0) return 0
+  if (angles.length === 1) return angles[0].angle + 90
+
+  let maxDifference = -Infinity
+  let maxDifferenceIndex = 0
+
+  for (let i = 0; i < angles.length; i++) {
+    for (let j = i + 1; j < angles.length; j++) {
+      const currentAngle = angles[i].angle
+      const nextAngle = angles[j].angle
+      const difference = (nextAngle - currentAngle + 360) % 360 // Circular difference
+
+      if (difference > maxDifference) {
+        maxDifference = difference
+        maxDifferenceIndex = i
+      }
+    }
+  }
+  
+  // Calculate the circular average angle between the two angles
+  const averageAngle = angles[maxDifferenceIndex].angle + maxDifference / 2
+  return (averageAngle + 90) % 360 + 180
+}
+
+
 const currentNodeOnTop = ref<Number>(-1)
 
 const currentEdgeBeingEdited = ref<Number>(-1)
@@ -199,13 +258,28 @@ const computeEdgeStyle = (edge: Edge) => {
 
   const x1 = fromRect.x + fromRect.width / 2
   const y1 = fromRect.y + fromRect.height / 2
-  const x2 = toRect.x + toRect.width / 2
-  const y2 = toRect.y + toRect.height / 2
+  let x2 = toRect.x + toRect.width / 2
+  let y2 = toRect.y + toRect.height / 2
+
+  if (edge.from === edge.to) {
+    // gets point at distance at angle
+    const dist = 100
+    x2 = x1 + dist * Math.cos(angledisplay.value)
+    y2 = y1 + dist * Math.sin(angledisplay.value)
+  }
 
   const radians = Math.atan2(y2 - y1, x2 - x1)
   const angle = radians * (180 / Math.PI)
 
+  if (edge.from !== edge.to) {
+    addToEdgeAngleMap(edge.from, edge.id, angle)
+    addToEdgeAngleMap(edge.to, edge.id, angle - 180)
+    // edgeAngleMap.value.set(111, [{edgeId: 1432432, angle: 11}])
+    console.log(JSON.stringify(Array.from(edgeAngleMap.value.entries())))
+  }
+
   const length = Math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+
 
   const calculatePerpendicularOffset = (angle: number, lineSeparation: number) => {
     const perpendicularAngle = angle + Math.PI / 2
@@ -217,26 +291,22 @@ const computeEdgeStyle = (edge: Edge) => {
       distanceY,
     }
   }
-
-  const { distanceX, distanceY }  = calculatePerpendicularOffset(radians, 10)
-
-  const unitX = distanceX / Math.sqrt(distanceX ** 2 + distanceY ** 2)
-  const unitY = distanceY / Math.sqrt(distanceX ** 2 + distanceY ** 2)
-
-  const curveRadius = 25
-
+  
   if (edge.from === edge.to) {
+    const curveRadius = 25
+    // const openSpaceAngle = getOpenSpace(edgeAngleMap.value.get(edge.to) ?? [])
+    const openSpaceAngle = 0
     return {
       line: {
         position: 'absolute',
-        top: `${y1 - 190}px`,
-        left: `${x1}px`,
-        width: `${distanceY * 2 + 16}px`,
-        height: `100px`,
-        'transform-origin': '0 0',
+        top: `${y1 - 116}px`,
+        left: `${x1 - 68}px`,
+        width: `${40}px`,
+        height: `${length}px`,
+        'transform-origin': 'center 0',
         // 45 deg should become 50% of greatest angle between other edges
-        transform: 'rotate(45deg)',
-        'border-radius': `${curveRadius}px ${curveRadius}px 0 0`,
+        transform: `rotate(${openSpaceAngle}deg)`,
+        'border-radius': `0 0 ${curveRadius}px ${curveRadius}px`,
         border: '8px solid rgb(17 24 39)',
         background: 'transparent',
       },
@@ -251,7 +321,7 @@ const computeEdgeStyle = (edge: Edge) => {
       weight: {
         // 45 deg should become 50% of greatest angle between other edges
         'transform-origin': '0 0',
-        transform: `rotate(${-1 * 45}deg) translate(${Math.cos(radians) * 10}px, ${-Math.cos(radians) * 60}px)`
+        transform: `rotate(${-openSpaceAngle}deg) translate(${Math.cos(radians) * 10}px, ${-Math.cos(radians) * 60}px)`
       }
     }
   }
@@ -261,6 +331,7 @@ const computeEdgeStyle = (edge: Edge) => {
   const outgoingNodeChildren = markov.value.adjacencyMap.get(edge.from) ?? []
 
   const isBidirectional = ingoingNodeChildren.includes(edge.from) && outgoingNodeChildren.includes(edge.to)
+  const { distanceX, distanceY } = calculatePerpendicularOffset(radians, 10)
 
   if (isBidirectional) {
     if (edge.from < edge.to) {
@@ -310,6 +381,8 @@ const computeEdgeStyle = (edge: Edge) => {
     }
   }
 
+  const unitX = distanceX / Math.sqrt(distanceX ** 2 + distanceY ** 2)
+  const unitY = distanceY / Math.sqrt(distanceX ** 2 + distanceY ** 2)
   return {
     line: {
       width: `${length - 60}px`,
@@ -341,7 +414,6 @@ const addNode = async () => {
   const node: Node = {
     id: nodesCreated.value++,
     style: null,
-    children: [],
     ref: null,
   }
 
@@ -375,6 +447,9 @@ const checkDeleteNode = (event: any, node: Node) => {
 
     // delete node
     const index = nodes.value.findIndex((n) => n.id === node.id)
+
+    // for animating the self-referencing arrow
+    deleteFromEdgeAngleMap(node.id)
 
     // delete all edges connected to node
     edges.value = edges.value.filter((e) => e.from !== node.id && e.to !== node.id)
