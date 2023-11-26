@@ -171,15 +171,23 @@ const {
 
 const tEdgeInput = ref('')
 
-const addEdge = () => {
+const addEdge = (options?: {
+  to: number
+  from: number
+  weight: number
+}) => {
 
-  const [from, to] = tEdgeInput.value.split(' ').map((n) => parseInt(n))
+  const { to, from, weight } = options ?? {
+    to: parseInt(tEdgeInput.value.split(' ')[0]),
+    from: parseInt(tEdgeInput.value.split(' ')[1]),
+    weight: 1,
+  }
 
   const edge: Edge = {
     id: edges.value.length,
     from,
     to,
-    weight: 1,
+    weight,
   }
 
   edges.value.push(edge)

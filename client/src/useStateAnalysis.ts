@@ -291,3 +291,27 @@ export function useStateAnalysis(nodes: Ref<Node[]>, edges: Ref<Edge[]>, options
     reCompute: getStateAnalysis,
   }
 }
+
+export function transitionMatrixToNodesAndEdges(
+  transitionMatrix: number[][],
+  nodes: Ref<Node[]>,
+  edges: Ref<Edge[]>,
+  addNodeFn: () => any,
+  addEdgeFn: () => any) {
+
+  // add a node for every row in the transition matrix
+  transitionMatrix.forEach((_) => addNodeFn())
+
+  // add an edge for every non-zero value in the transition matrix
+  transitionMatrix.forEach((row, from) => {
+    row.forEach((weight, to) => {
+      if (weight > 0) {
+        addEdgeFn({
+          from: nodes.value[from].id,
+          to: nodes.value[to].id,
+          weight
+        })
+      }
+    })
+  })
+}
