@@ -16,6 +16,11 @@ type Edge = {
   weight: number
 }
 
+type Options = Ref<{
+  uniformEdgeProbability?: boolean
+  steadyStatePrecision?: number
+}>
+
 // node id -> list of child node ids
 type AdjacencyMap = Map<number, number[]>;
 
@@ -206,11 +211,25 @@ const chainValidator = (transitionMatrix: number[][], nodes: Node[]) => {
   }
 }
 
-export function useStateAnalysis(nodes: Ref<Node[]>, edges: Ref<Edge[]>) {
+export function useStateAnalysis(nodes: Ref<Node[]>, edges: Ref<Edge[]>, options?: Options) {
+
+  const defaultOptions = {
+    uniformEdgeProbability: false,
+    steadyStatePrecision: 3,
+  }
 
   const getStateAnalysis = () => {
+
+    const {
+      uniformEdgeProbability,
+      steadyStatePrecision,
+    } = Object.assign(defaultOptions, options?.value ?? {})
+
     const adjacencyMap = getAdjacencyMap(nodes.value, edges.value)
-    const transitionMatrix = getTransitionMatrix(nodes.value, edges.value)
+    const transitionMatrix = uniformEdgeProbability ? (
+      getTransitionMatrixUniform(adjacencyMap, nodes.value)
+    ) : getTransitionMatrix(nodes.value, edges.value)
+
 
     const {
       stronglyCoupledComponents: communicatingClasses,
@@ -239,8 +258,9 @@ export function useStateAnalysis(nodes: Ref<Node[]>, edges: Ref<Edge[]>) {
     // unique steady state distribution only exists if there is one aperiodic recurrent class
     const uniqueSteadyState = recurrentClasses.length === 1 && recurrentClassPeriods[0] === 1
 
-    const PRECISION = 3
-    const steadyStateVector = uniqueSteadyState ? getSteadyStateVector(transitionMatrix, PRECISION) : undefined
+    const steadyStateVector = uniqueSteadyState ? (
+      getSteadyStateVector(transitionMatrix, steadyStatePrecision)
+    ) : undefined
 
     const { valid, illegalStates } = chainValidator(transitionMatrix, nodes.value)
 

@@ -1,7 +1,9 @@
 <template>
   <div class="absolute w-full h-full bg-gray-600">
+    <button class="fixed text-white" @click="markovOptions.uniformEdgeProbability = !markovOptions.uniformEdgeProbability">Edge Prob Toggle</button>
     <div class="flex flex-col items-center justify-center h-full p-12">
       <h1
+        @click="markovOptions.steadyStatePrecision++"
         class="text-5xl font-bold text-white mb-5"
       >
         Create A Markov Chain
@@ -100,21 +102,23 @@
             <div
               :style="computeEdgeStyle(edge).arrow"
             >
-              <p
-                v-if="edge.id !== currentEdgeBeingEdited"
-                @dblclick="startEditing(edge.id)"
-                :style="computeEdgeStyle(edge).weight"
-                class="text-white"
-              >{{ edge.weight }}</p>
-              <input
-                v-else
-                @blur="stopEditing()"
-                @keyup.enter="stopEditing()"
-                :v-bind="edge.weight"
-                :style="computeEdgeStyle(edge).weight"
-                type="text"
-                v-model.number="edge.weight"
-              >
+              <div v-if="!markovOptions.uniformEdgeProbability">
+                <p
+                  v-if="edge.id !== currentEdgeBeingEdited"
+                  @dblclick="startEditing(edge.id)"
+                  :style="computeEdgeStyle(edge).weight"
+                  class="text-white"
+                >{{ edge.weight }}</p>
+                <input
+                  v-else
+                  @blur="stopEditing()"
+                  @keyup.enter="stopEditing()"
+                  :v-bind="edge.weight"
+                  :style="computeEdgeStyle(edge).weight"
+                  type="text"
+                  v-model.number="edge.weight"
+                >
+              </div>
             </div>
           </div>
         </div>
@@ -155,10 +159,15 @@ const nodesCreated = ref(0)
 const nodes = ref<Node[]>([])
 const edges = ref<Edge[]>([])
 
+const markovOptions = ref({
+  uniformEdgeProbability: false,
+  steadyStatePrecision: 3
+})
+
 const {
   state: markov,
   reCompute: reComputeMarkov,
-} = useStateAnalysis(nodes, edges)
+} = useStateAnalysis(nodes, edges, markovOptions)
 
 const tEdgeInput = ref('')
 
