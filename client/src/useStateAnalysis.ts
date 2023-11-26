@@ -292,23 +292,23 @@ export function useStateAnalysis(nodes: Ref<Node[]>, edges: Ref<Edge[]>, options
   }
 }
 
-export function transitionMatrixToNodesAndEdges(
+export async function transitionMatrixToNodesAndEdges(
   transitionMatrix: number[][],
-  nodes: Ref<Node[]>,
-  edges: Ref<Edge[]>,
-  addNodeFn: () => any,
-  addEdgeFn: () => any) {
+  addNodeFn: () => Promise<void>,
+  addEdgeFn: (options: { to: number, from: number, weight: number }) => void) {
 
   // add a node for every row in the transition matrix
-  transitionMatrix.forEach((_) => addNodeFn())
+  for await (const _ of transitionMatrix) {
+    await addNodeFn()
+  }
 
   // add an edge for every non-zero value in the transition matrix
   transitionMatrix.forEach((row, from) => {
     row.forEach((weight, to) => {
       if (weight > 0) {
         addEdgeFn({
-          from: nodes.value[from].id,
-          to: nodes.value[to].id,
+          to,
+          from,
           weight
         })
       }

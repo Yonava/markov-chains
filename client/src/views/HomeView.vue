@@ -3,7 +3,7 @@
     <button class="fixed text-white" @click="markovOptions.uniformEdgeProbability = !markovOptions.uniformEdgeProbability">Edge Prob Toggle</button>
     <div class="flex flex-col items-center justify-center h-full p-12">
       <h1
-        @click="markovOptions.steadyStatePrecision++"
+        @click="generateNewNodesAndEdges"
         class="text-5xl font-bold text-white mb-5"
       >
         Create A Markov Chain
@@ -18,7 +18,7 @@
         </button>
 
         <button
-          @click="addEdge"
+          @click="addEdge()"
           class="bg-gray-800 absolute bottom-0 left-0 w-60 h-20 hover:bg-gray-900 text-white text-3xl"
         >
           New Edge
@@ -61,6 +61,16 @@
           {{ killBoxMessage }}
         </div>
 
+        <!-- mini nodes -->
+        <div
+          v-for="node in miniNodes"
+          @mousedown="miniNodeOnTheMove = true"
+          @mouseup="miniNodeOnTheMove = false; removeMiniNodes()"
+          class="fixed rounded-full bg-gray-800 w-4 h-4 border-4 border-black z-50 cursor-pointer"
+          :style="node.style + '; opacity:' + (node.style ? 1 : 0)"
+          :ref="(el) => (node.ref = el)"
+        ></div>
+
         <!-- nodes -->
         <div
           v-for="(node, index) in nodes"
@@ -68,12 +78,18 @@
         >
           <button
             @click="nodeClicked(node)"
-            @mousedown="currentNodeOnTop = node.id"
+            @mouseover="currentNodeOnTop = node.id"
+            @mouseleave="removeMiniNodes()"
             @mouseup="checkDeleteNode($event, node)"
-            :class="`fixed w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node)[1] + ' ' + (node.id === currentNodeOnTop ? 'z-50' : 'z-10')"
+            :class="`fixed w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node)[1] + ' ' + (node.id === currentNodeOnTop ? 'z-40' : 'z-10')"
             :style="node.style + '; opacity:' + (node.style ? 1 : 0)"
             :ref="(el) => (node.ref = el)"
           >
+            <div
+              @mouseover="initMiniNodes()"
+              @mouseleave="removeMiniNodes()"
+              class="border border-red-500 w-40 h-40 absolute"
+            ></div>
             <span
               v-if="!simState.running"
               class="text-white text-3xl"
@@ -87,7 +103,6 @@
               {{ simState.probVector[index] }}
             </span>
           </button>
-
         </div>
 
         <!-- edges -->
@@ -124,6 +139,8 @@
         </div>
       </div>
 
+      {{ miniNodes.length }}
+
     </div>
 
     <DebugScreen :markov="markov" />
@@ -132,9 +149,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, type ComponentPublicInstance } from 'vue'
+import { ref, type ComponentPublicInstance, type ComputedRef, type MaybeRefOrGetter } from 'vue'
 import { useDraggable } from '@vueuse/core'
-import { useStateAnalysis } from '@/useStateAnalysis';
+import { useStateAnalysis, transitionMatrixToNodesAndEdges } from '@/useStateAnalysis';
 import { getStateAfterNSteps } from '@/useLinearAlgebra';
 import DebugScreen from '@/components/DebugScreen.vue';
 
@@ -159,6 +176,48 @@ const nodesCreated = ref(0)
 const nodes = ref<Node[]>([])
 const edges = ref<Edge[]>([])
 
+type MiniNode = {
+  ref: MaybeRefOrGetter
+  style: ComputedRef
+}
+
+let miniNodes = ref<MiniNode[]>([])
+const miniNodeOnTheMove = ref(false)
+
+const initMiniNodes = async () => {
+  miniNodes.value = new Array(4).fill(0).map((_) => ({ ref: null } as MiniNode))
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  miniNodes.value.forEach((node, index) => {
+    console.log(node)
+    const { style } = useDraggable(node.ref, {
+      initialValue: {
+        x: 100 + index * 100,
+        y: 100,
+      },
+    })
+    miniNodes.value[index].style = style
+  })
+}
+
+const removeMiniNodes = () => {
+  if (miniNodeOnTheMove.value) return
+  miniNodes.value = []
+}
+
+const generateNewNodesAndEdges = () => {
+  nodes.value = []
+  edges.value = []
+  nodesCreated.value = 0
+  const matrixSize = Math.floor(Math.random() * 10) + 1
+  const edgeValue = () => Math.random() < 1 / matrixSize ? Number(Math.random().toFixed(2)) : 0
+  const newTransitionMatrix = new Array(matrixSize).fill(0).map(() => new Array(matrixSize).fill(0).map(() => edgeValue()))
+  transitionMatrixToNodesAndEdges(
+    newTransitionMatrix,
+    addNode,
+    addEdge
+  )
+}
+
 const markovOptions = ref({
   uniformEdgeProbability: false,
   steadyStatePrecision: 3
@@ -178,8 +237,8 @@ const addEdge = (options?: {
 }) => {
 
   const { to, from, weight } = options ?? {
-    to: parseInt(tEdgeInput.value.split(' ')[0]),
-    from: parseInt(tEdgeInput.value.split(' ')[1]),
+    from: parseInt(tEdgeInput.value.split(' ')[0]),
+    to: parseInt(tEdgeInput.value.split(' ')[1]),
     weight: 1,
   }
 
@@ -355,6 +414,7 @@ const killBox = ref(null)
 const killBoxMessage = ref('Delete Node')
 
 const addNode = async () => {
+
   const node: Node = {
     id: nodesCreated.value++,
     style: null,
