@@ -113,7 +113,7 @@
                 :v-bind="edge.weight"
                 :style="computeEdgeStyle(edge).weight"
                 type="text"
-                v-model="edge.weight"
+                v-model.number="edge.weight"
               >
             </div>
           </div>
