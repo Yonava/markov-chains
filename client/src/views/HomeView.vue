@@ -30,9 +30,25 @@
 
         <!-- simulate -->
         <button
+          v-if="!simState.running && !simState.ready"
+          @click="simState.ready = true"
           class="bg-gray-800 absolute top-0 right-0 w-60 h-20 hover:bg-gray-900 text-white text-3xl z-10"
         >
           Run Simulation
+        </button>
+        <button
+          v-else-if="simState.running"
+          @click="simState.running = false"
+          class="bg-gray-800 absolute top-0 right-0 w-60 h-20 hover:bg-gray-900 text-white text-3xl z-10"
+        >
+          Stop (Steps: {{ simState.step }})
+        </button>
+        <button
+          v-else-if="simState.ready"
+          @click="simState.ready = false"
+          class="bg-gray-800 absolute top-0 right-0 w-60 h-20 hover:bg-gray-900 text-white text-3xl z-10"
+        >
+          Select A Node
         </button>
 
         <!-- node killer -->
@@ -45,18 +61,28 @@
 
         <!-- nodes -->
         <div
-          v-for="node in nodes"
+          v-for="(node, index) in nodes"
           :key="node.id"
         >
           <button
+            @click="nodeClicked(node)"
             @mousedown="currentNodeOnTop = node.id"
             @mouseup="checkDeleteNode($event, node)"
-            :class="`fixed w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node) + ' ' + (node.id === currentNodeOnTop ? 'z-50' : 'z-10')"
+            :class="`fixed w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node)[1] + ' ' + (node.id === currentNodeOnTop ? 'z-50' : 'z-10')"
             :style="node.style + '; opacity:' + (node.style ? 1 : 0)"
             :ref="(el) => (node.ref = el)"
           >
-            <span class="text-white text-3xl">
+            <span
+              v-if="!simState.running"
+              class="text-white text-3xl"
+            >
               {{ node.id }}
+            </span>
+            <span
+              v-else
+              class="text-white text-xl"
+            >
+              {{ simState.probVector[index] }}
             </span>
           </button>
 
@@ -87,58 +113,23 @@
                 :v-model="edge.weight"
                 :style="computeEdgeStyle(edge).weight"
                 type="text"
-                v-model="edge.weight"
+                v-model.number="edge.weight"
               >
             </div>
           </div>
         </div>
       </div>
     </div>
-
-
-    <div
-      class="absolute top-0 left-0 z-50 text-white text-xl bg-red-500 p-4 opacity-75"
-      style="pointer-events: none;"
-    >
-      <b>
-        Adjacency Map:
-      </b>
-      <br>
-      <div>
-        {{ adjacencyMap }}
-      </div>
-      <b>
-        Strongly Coupled Components:
-      </b>
-      <div>
-        {{ stronglyCoupled }}
-      </div>
-    </div>
-
-    <div
-      class="absolute top-0 right-0 text-white text-xl bg-blue-500 p-4 z-50 opacity-75"
-      style="pointer-events: none;"
-    >
-      <b>
-        Transition Matrix:
-      </b>
-      <div
-        v-for="row in transitionMatrix"
-        class="flex flex-row w-full justify-around gap-7"
-      >
-        <div v-for="cell in row">
-          {{ cell.toFixed(2) }}
-        </div>
-      </div>
-    </div>
-
+    <DebugScreen :markov="markov" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, type ComponentPublicInstance } from 'vue'
+import { ref, type ComponentPublicInstance } from 'vue'
 import { useDraggable } from '@vueuse/core'
 import { useStateAnalysis } from '@/useStateAnalysis';
+import { getStateAfterNSteps } from '@/useLinearAlgebra';
+import DebugScreen from '@/components/DebugScreen.vue';
 
 const angledisplay = ref(0)
 
@@ -161,6 +152,11 @@ const nodesCreated = ref(0)
 
 const nodes = ref<Node[]>([])
 const edges = ref<Edge[]>([])
+
+const {
+  state: markov,
+  reCompute: reComputeMarkov,
+} = useStateAnalysis(nodes, edges)
 
 const tEdgeInput = ref('')
 
@@ -247,6 +243,7 @@ const startEditing = (edgeId: number) => {
   currentEdgeBeingEdited.value = edgeId
 }
 const stopEditing = () => {
+  reComputeMarkov()
   currentEdgeBeingEdited.value = -1
 }
 
@@ -330,8 +327,8 @@ const computeEdgeStyle = (edge: Edge) => {
   }
 
   // handle bidirectional edges by offsetting them
-  const ingoingNodeChildren = adjacencyMap.value.get(edge.to) ?? []
-  const outgoingNodeChildren = adjacencyMap.value.get(edge.from) ?? []
+  const ingoingNodeChildren = markov.value.adjacencyMap.get(edge.to) ?? []
+  const outgoingNodeChildren = markov.value.adjacencyMap.get(edge.from) ?? []
 
   const isBidirectional = ingoingNodeChildren.includes(edge.from) && outgoingNodeChildren.includes(edge.to)
   const { distanceX, distanceY } = calculatePerpendicularOffset(radians, 10)
@@ -467,44 +464,58 @@ const checkDeleteNode = (event: any, node: Node) => {
   }
 }
 
-const adjacencyMap = computed(() => nodes.value.reduce((acc, curr) => acc.set(
-  curr.id,
-  edges.value
-    .filter((edge) => edge.from === curr.id)
-    .map((edge) => edge.to)
-), new Map() as Map<number, number[]>))
-
-const transitionMatrix = computed(() => Array.from(adjacencyMap.value).reduce((acc, [node, children]) => {
-  // replace uniform weight with adjustable weights
-  const uniformWeight = 1 / children.length
-  const noChildMap = (n: Node) => n.id === node ? 1 : 0
-  const childMap = (n: Node) => children.includes(n.id) ? uniformWeight : 0
-  const row = children.length === 0
-    ? nodes.value.map(noChildMap)
-    : nodes.value.map(childMap)
-  acc.push(row)
-  return acc
-}, [] as number[][]))
-
-const stronglyCoupled = useStateAnalysis(adjacencyMap)
-
 const getColor = (node: Node) => {
 
-  const index = stronglyCoupled.value.nodeToComponentMap.get(node.id)
+  const index = markov.value.nodeToCommunicatingClassMap.get(node.id)
 
-  if (stronglyCoupled.value.transientStates.includes(node.id)) return 'border-gray-900'
-  if (index === undefined) return 'bg-gray-900'
+  if (markov.value.transientStates.includes(node.id)) return ['Gray', 'border-gray-900']
+  if (index === undefined) return ['Gray', 'border-gray-900']
 
   const colors = [
-    'border-red-500',
-    'border-yellow-500',
-    'border-green-500',
-    'border-blue-500',
-    'border-indigo-500',
-    'border-purple-500',
-    'border-pink-500',
+    ['Red', 'border-red-500'],
+    ['Orange', 'border-yellow-500'],
+    ['Green', 'border-green-500'],
+    ['Blue', 'border-blue-500'],
+    ['Indigo', 'border-indigo-500'],
+    ['Purple', 'border-purple-500'],
+    ['Pink', 'border-pink-500'],
   ]
 
   return colors[index % colors.length]
+}
+
+const simState = ref({
+  running: false,
+  ready: false,
+  step: 0,
+  probVector: [] as number[],
+})
+
+const nodeClicked = (node: Node) => {
+  if (simState.value.ready && !simState.value.running) {
+    simState.value.running = true
+    simState.value.step = 0
+    simState.value.ready = false
+    const nodeIndex = nodes.value.findIndex((n) => n.id === node.id)
+    simState.value.probVector = new Array(nodes.value.length).fill(0).map((_, i) => i === nodeIndex ? 1 : 0)
+    runSimulation()
+  }
+}
+
+const runSimulation = () => {
+  const sim = setInterval(() => {
+    if (simState.value.running) {
+      simState.value.step++
+      simState.value.probVector = getStateAfterNSteps(
+        markov.value.transitionMatrix,
+        simState.value.probVector,
+        1
+      )
+    } else {
+      clearInterval(sim)
+      simState.value.probVector = []
+      simState.value.step = 0
+    }
+  }, 500)
 }
 </script>
