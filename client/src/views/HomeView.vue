@@ -50,7 +50,7 @@
         >
           <button
             @mousedown="currentNodeOnTop = node.id"
-            @mouseup="checkDeleteNode($event, node)"
+            @mouseup="checkDeleteNode($event, node), currentNodeOnTop = -1"
             :class="`fixed w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node) + ' ' + (node.id === currentNodeOnTop ? 'z-50' : 'z-10')"
             :style="node.style + '; opacity:' + (node.style ? 1 : 0)"
             :ref="(el) => (node.ref = el)"
@@ -203,17 +203,22 @@ const addToEdgeAngleMap = (nodeId: number, edgeId: number, angle: number): void 
   }
 }
 
+const deleteFromEdgeAngleMap = (nodeId: number) => {
+  edgeAngleMap.value.delete(nodeId);
+}
+
 const getOpenSpace = (angles: {
   edgeId: number,
   angle: number,
 }[]): number => {
+  // does not work for more than 2 edges
+
   // all in degrees
   if (angles.length === 0) return 0
   if (angles.length === 1) return angles[0].angle + 90
 
   let maxDifference = -Infinity
-  let averageAngle = 0
-
+  let maxDifferenceIndex = 0
 
   for (let i = 0; i < angles.length; i++) {
     for (let j = i + 1; j < angles.length; j++) {
@@ -223,12 +228,13 @@ const getOpenSpace = (angles: {
 
       if (difference > maxDifference) {
         maxDifference = difference
-        // Calculate the circular average angle between the two angles
-        averageAngle = (currentAngle + difference / 2) % 360
+        maxDifferenceIndex = i
       }
     }
   }
-
+  
+  // Calculate the circular average angle between the two angles
+  const averageAngle = angles[maxDifferenceIndex].angle + maxDifference / 2
   return (averageAngle + 90) % 360 + 180
 }
 
@@ -271,6 +277,8 @@ const computeEdgeStyle = (edge: Edge) => {
   if (edge.from !== edge.to) {
     addToEdgeAngleMap(edge.from, edge.id, angle)
     addToEdgeAngleMap(edge.to, edge.id, angle - 180)
+    // edgeAngleMap.value.set(111, [{edgeId: 1432432, angle: 11}])
+    console.log(JSON.stringify(Array.from(edgeAngleMap.value.entries())))
   }
 
   const length = Math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
@@ -441,6 +449,9 @@ const checkDeleteNode = (event: any, node: Node) => {
 
     // delete node
     const index = nodes.value.findIndex((n) => n.id === node.id)
+
+    // for animating the self-referencing arrow
+    deleteFromEdgeAngleMap(node.id)
 
     // delete all edges connected to node
     edges.value = edges.value.filter((e) => e.from !== node.id && e.to !== node.id)
