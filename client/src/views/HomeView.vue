@@ -297,7 +297,8 @@ const computeEdgeStyle = (edge: Edge) => {
   
   if (edge.from === edge.to) {
     const curveRadius = 25
-    const openSpaceAngle = getOpenSpace(edgeAngleMap.value.get(edge.to) ?? [])
+    // const openSpaceAngle = getOpenSpace(edgeAngleMap.value.get(edge.to) ?? [])
+    const openSpaceAngle = 0
     return {
       line: {
         position: 'absolute',
