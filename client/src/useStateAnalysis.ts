@@ -1,7 +1,7 @@
 // @ts-ignore
 import scc from 'strongly-connected-components';
 import { computed, type Ref } from 'vue';
-import { getSteadyStateVector, getStateAfterNSteps } from './useLinearAlgebra';
+import { getSteadyStateVector } from './useLinearAlgebra';
 
 type Node = {
   id: number
@@ -203,7 +203,7 @@ export function useStateAnalysis(nodes: Ref<Node[]>, edges: Ref<Edge[]>) {
       return getPeriod(component, adjacencyMap);
     })
 
-    let steadyStateVector = 'No Unique Steady State'
+    let steadyStateVector = undefined
     // unique steady state distribution only exists if there is one aperiodic recurrent class
     if (recurrentClasses.length === 1 && componentPeriods[0] === 1) {
       const steadyStateVectorPrecision = 3

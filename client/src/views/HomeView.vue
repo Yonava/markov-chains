@@ -122,35 +122,7 @@
 
     </div>
 
-    <!-- <div
-      class="absolute top-0 right-0 z-50 text-white text-xl bg-red-500 p-4 opacity-75"
-      style="pointer-events: none;"
-    >
-      <div v-for="(value, key) in markov">
-        <b>
-          {{ key }}:
-        </b>
-        <br>
-        {{ value }}
-      </div>
-    </div> -->
-
-    <!-- <div
-      class="absolute top-0 right-0 text-white text-xl bg-blue-500 p-4 z-50 opacity-75"
-      style="pointer-events: none;"
-    >
-      <b>
-        Transition Matrix:
-      </b>
-      <div
-        v-for="row in transitionMatrix"
-        class="flex flex-row w-full justify-around gap-7"
-      >
-        <div v-for="cell in row">
-          {{ cell.toFixed(2) }}
-        </div>
-      </div>
-    </div> -->
+    <DebugScreen :markov="markov" />
 
   </div>
 </template>
@@ -160,6 +132,7 @@ import { ref, type ComponentPublicInstance } from 'vue'
 import { useDraggable } from '@vueuse/core'
 import { useStateAnalysis } from '@/useStateAnalysis';
 import { getStateAfterNSteps } from '@/useLinearAlgebra';
+import DebugScreen from '@/components/DebugScreen.vue';
 
 type Node = {
   id: number
