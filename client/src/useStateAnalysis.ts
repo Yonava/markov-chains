@@ -203,14 +203,11 @@ export function useStateAnalysis(nodes: Ref<Node[]>, edges: Ref<Edge[]>) {
       return getPeriod(component, adjacencyMap);
     })
 
+    // unique steady state distribution only exists if there is one aperiodic recurrent class
     const uniqueSteadyState = recurrentClasses.length === 1 && componentPeriods[0] === 1
 
-    let steadyStateVector = undefined
-    // unique steady state distribution only exists if there is one aperiodic recurrent class
-    if (uniqueSteadyState) {
-      const steadyStateVectorPrecision = 3
-      steadyStateVector = getSteadyStateVector(transitionMatrix, steadyStateVectorPrecision)
-    }
+    const PRECISION = 3
+    const steadyStateVector = uniqueSteadyState ? getSteadyStateVector(transitionMatrix, PRECISION) : undefined
 
     return {
       totalStates: nodes.value.length,
