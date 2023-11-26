@@ -162,21 +162,35 @@ const getAdjacencyMap = (nodes: Node[], edges: Edge[]) => nodes.reduce((acc, cur
     .map((edge) => edge.to)
 ), new Map() as Map<number, number[]>)
 
-const getTransitionMatrix = (adjMap: AdjacencyMap, nodes: Node[]) => Array.from(adjMap).reduce((acc, [node, children]) => {
-  // replace uniform weight with adjustable weights
-  const uniformWeight = 1 / children.length
-  const noChildMap = (n: Node) => n.id === node ? 1 : 0
-  const childMap = (n: Node) => children.includes(n.id) ? uniformWeight : 0
-  const row = children.length === 0
-    ? nodes.map(noChildMap)
-    : nodes.map(childMap)
-  acc.push(row)
-  return acc
-}, [] as number[][])
+const getTransitionMatrixUniform = (adjMap: AdjacencyMap, nodes: Node[]) => {
+  return Array.from(adjMap).reduce((acc, [node, children]) => {
+    const uniformWeight = 1 / children.length
+    const noChildMap = (n: Node) => n.id === node ? 1 : 0
+    const childMap = (n: Node) => children.includes(n.id) ? uniformWeight : 0
+    const row = children.length === 0
+      ? nodes.map(noChildMap)
+      : nodes.map(childMap)
+    acc.push(row)
+    return acc
+  }, [] as number[][])
+}
+
+const getTransitionMatrix = (adjMap: AdjacencyMap, nodes: Node[]) => {
+  return Array.from(adjMap).reduce((acc, [node, children]) => {
+    const uniformWeight = 1 / children.length
+    const noChildMap = (n: Node) => n.id === node ? 1 : 0
+    const childMap = (n: Node) => children.includes(n.id) ? uniformWeight : 0
+    const row = children.length === 0
+      ? nodes.map(noChildMap)
+      : nodes.map(childMap)
+    acc.push(row)
+    return acc
+  }, [] as number[][])
+}
 
 export function useStateAnalysis(nodes: Ref<Node[]>, edges: Ref<Edge[]>) {
 
-  return computed(() => {
+  const getStateAnalysis = () => {
     const adjacencyMap = getAdjacencyMap(nodes.value, edges.value)
     const transitionMatrix = getTransitionMatrix(adjacencyMap, nodes.value)
 
@@ -198,13 +212,14 @@ export function useStateAnalysis(nodes: Ref<Node[]>, edges: Ref<Edge[]>) {
     }
 
     const transientStates = transientClasses.flat()
+    const recurrentStates = recurrentClasses.flat()
 
-    const componentPeriods = recurrentClasses.map((component) => {
+    const recurrentClassPeriods = recurrentClasses.map((component) => {
       return getPeriod(component, adjacencyMap);
     })
 
     // unique steady state distribution only exists if there is one aperiodic recurrent class
-    const uniqueSteadyState = recurrentClasses.length === 1 && componentPeriods[0] === 1
+    const uniqueSteadyState = recurrentClasses.length === 1 && recurrentClassPeriods[0] === 1
 
     const PRECISION = 3
     const steadyStateVector = uniqueSteadyState ? getSteadyStateVector(transitionMatrix, PRECISION) : undefined
@@ -213,17 +228,24 @@ export function useStateAnalysis(nodes: Ref<Node[]>, edges: Ref<Edge[]>) {
       totalStates: nodes.value.length,
       transientStates,
       transientStateCount: transientClasses.length,
+      recurrentStates,
+      recurrentStateCount: recurrentStates.length,
       recurrentClasses,
       recurrentClassCount: recurrentClasses.length,
       communicatingClasses,
       communicatingClassCount: communicatingClasses.length,
       nodeToCommunicatingClassMap,
-      componentPeriods,
-      periodClassifications: componentPeriods.map((period) => period === 1 ? "APERIODIC" : "PERIODIC"),
+      recurrentClassPeriods,
+      periodClassifications: recurrentClassPeriods.map((period) => period === 1 ? "APERIODIC" : "PERIODIC"),
       transitionMatrix,
       adjacencyMap,
       uniqueSteadyState,
-      steadyStateVector
+      steadyStateVector,
     }
-  })
+  }
+
+  return {
+    state: computed(getStateAnalysis),
+    reCompute: getStateAnalysis,
+  }
 }

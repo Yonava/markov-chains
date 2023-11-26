@@ -155,7 +155,10 @@ const nodesCreated = ref(0)
 const nodes = ref<Node[]>([])
 const edges = ref<Edge[]>([])
 
-const markov = useStateAnalysis(nodes, edges)
+const {
+  state: markov,
+  reCompute: reComputeMarkov,
+} = useStateAnalysis(nodes, edges)
 
 const tEdgeInput = ref('')
 
@@ -181,6 +184,7 @@ const startEditing = (edgeId: number) => {
   currentEdgeBeingEdited.value = edgeId
 }
 const stopEditing = () => {
+  reComputeMarkov()
   currentEdgeBeingEdited.value = -1
 }
 
