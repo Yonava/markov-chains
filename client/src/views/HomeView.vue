@@ -85,7 +85,18 @@
               {{ simState.probVector[index] }}
             </span>
           </button>
-
+            <transition name="fade">
+            <button v-if="isHovered(node.id, 'up')" class="mini-button up"></button>
+          </transition>
+          <transition name="fade">
+            <button v-if="isHovered(node.id, 'down')" class="mini-button down"></button>
+          </transition>
+          <transition name="fade">
+            <button v-if="isHovered(node.id, 'left')" class="mini-button left"></button>
+          </transition>
+          <transition name="fade">
+            <button v-if="isHovered(node.id, 'right')" class="mini-button right"></button>
+          </transition>
         </div>
 
         <!-- edges -->
@@ -131,7 +142,6 @@ import { useStateAnalysis } from '@/useStateAnalysis';
 import { getStateAfterNSteps } from '@/useLinearAlgebra';
 import DebugScreen from '@/components/DebugScreen.vue';
 
-const angledisplay = ref(0)
 
 type Node = {
   id: number
@@ -264,8 +274,10 @@ const computeEdgeStyle = (edge: Edge) => {
   if (edge.from === edge.to) {
     // gets point at distance at angle
     const dist = 100
-    x2 = x1 + dist * Math.cos(angledisplay.value)
-    y2 = y1 + dist * Math.sin(angledisplay.value)
+    const angleDisplay = 0
+
+    x2 = x1 + dist * Math.cos(angleDisplay)
+    y2 = y1 + dist * Math.sin(angleDisplay)
   }
 
   const radians = Math.atan2(y2 - y1, x2 - x1)
