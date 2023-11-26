@@ -50,7 +50,7 @@
         >
           <button
             @mousedown="currentNodeOnTop = node.id"
-            @mouseup="checkDeleteNode($event, node), currentNodeOnTop = -1"
+            @mouseup="checkDeleteNode($event, node)"
             :class="`fixed w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node) + ' ' + (node.id === currentNodeOnTop ? 'z-50' : 'z-10')"
             :style="node.style + '; opacity:' + (node.style ? 1 : 0)"
             :ref="(el) => (node.ref = el)"
@@ -301,7 +301,7 @@ const computeEdgeStyle = (edge: Edge) => {
     return {
       line: {
         position: 'absolute',
-        top: `${y1 - 132}px`,
+        top: `${y1 - 116}px`,
         left: `${x1 - 68}px`,
         width: `${40}px`,
         height: `${length}px`,
