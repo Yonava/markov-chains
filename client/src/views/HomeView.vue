@@ -30,9 +30,25 @@
 
         <!-- simulate -->
         <button
+          v-if="!simState.running && !simState.ready"
+          @click="simState.ready = true"
           class="bg-gray-800 absolute top-0 right-0 w-60 h-20 hover:bg-gray-900 text-white text-3xl z-10"
         >
           Run Simulation
+        </button>
+        <button
+          v-else-if="simState.running"
+          @click="simState.running = false"
+          class="bg-gray-800 absolute top-0 right-0 w-60 h-20 hover:bg-gray-900 text-white text-3xl z-10"
+        >
+          Stop (Steps: {{ simState.step }})
+        </button>
+        <button
+          v-else-if="simState.ready"
+          @click="simState.ready = false"
+          class="bg-gray-800 absolute top-0 right-0 w-60 h-20 hover:bg-gray-900 text-white text-3xl z-10"
+        >
+          Select A Node
         </button>
 
         <!-- node killer -->
@@ -45,18 +61,28 @@
 
         <!-- nodes -->
         <div
-          v-for="node in nodes"
+          v-for="(node, index) in nodes"
           :key="node.id"
         >
           <button
+            @click="nodeClicked(node)"
             @mousedown="currentNodeOnTop = node.id"
             @mouseup="checkDeleteNode($event, node)"
             :class="`fixed w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node)[1] + ' ' + (node.id === currentNodeOnTop ? 'z-50' : 'z-10')"
             :style="node.style + '; opacity:' + (node.style ? 1 : 0)"
             :ref="(el) => (node.ref = el)"
           >
-            <span class="text-white text-3xl">
+            <span
+              v-if="!simState.running"
+              class="text-white text-3xl"
+            >
               {{ node.id }}
+            </span>
+            <span
+              v-else
+              class="text-white text-xl"
+            >
+              {{ simState.probVector[index] }}
             </span>
           </button>
 
@@ -87,7 +113,7 @@
                 :v-bind="edge.weight"
                 :style="computeEdgeStyle(edge).weight"
                 type="text"
-                v-model="edge.weight"
+                v-model.number="edge.weight"
               >
             </div>
           </div>
@@ -96,35 +122,7 @@
 
     </div>
 
-    <div
-      class="absolute top-0 right-0 z-50 text-white text-xl bg-red-500 p-4 opacity-75"
-      style="pointer-events: none;"
-    >
-      <div v-for="(value, key) in markov">
-        <b>
-          {{ key }}:
-        </b>
-        <br>
-        {{ value }}
-      </div>
-    </div>
-
-    <!-- <div
-      class="absolute top-0 right-0 text-white text-xl bg-blue-500 p-4 z-50 opacity-75"
-      style="pointer-events: none;"
-    >
-      <b>
-        Transition Matrix:
-      </b>
-      <div
-        v-for="row in transitionMatrix"
-        class="flex flex-row w-full justify-around gap-7"
-      >
-        <div v-for="cell in row">
-          {{ cell.toFixed(2) }}
-        </div>
-      </div>
-    </div> -->
+    <DebugScreen :markov="markov" />
 
   </div>
 </template>
@@ -133,6 +131,8 @@
 import { ref, type ComponentPublicInstance } from 'vue'
 import { useDraggable } from '@vueuse/core'
 import { useStateAnalysis } from '@/useStateAnalysis';
+import { getStateAfterNSteps } from '@/useLinearAlgebra';
+import DebugScreen from '@/components/DebugScreen.vue';
 
 type Node = {
   id: number
@@ -155,7 +155,10 @@ const nodesCreated = ref(0)
 const nodes = ref<Node[]>([])
 const edges = ref<Edge[]>([])
 
-const markov = useStateAnalysis(nodes, edges)
+const {
+  state: markov,
+  reCompute: reComputeMarkov,
+} = useStateAnalysis(nodes, edges)
 
 const tEdgeInput = ref('')
 
@@ -181,6 +184,7 @@ const startEditing = (edgeId: number) => {
   currentEdgeBeingEdited.value = edgeId
 }
 const stopEditing = () => {
+  reComputeMarkov()
   currentEdgeBeingEdited.value = -1
 }
 
@@ -387,7 +391,7 @@ const checkDeleteNode = (event: any, node: Node) => {
 
 const getColor = (node: Node) => {
 
-  const index = markov.value.nodeToComponentMap.get(node.id)
+  const index = markov.value.nodeToCommunicatingClassMap.get(node.id)
 
   if (markov.value.transientStates.includes(node.id)) return ['Gray', 'border-gray-900']
   if (index === undefined) return ['Gray', 'border-gray-900']
@@ -403,5 +407,40 @@ const getColor = (node: Node) => {
   ]
 
   return colors[index % colors.length]
+}
+
+const simState = ref({
+  running: false,
+  ready: false,
+  step: 0,
+  probVector: [] as number[],
+})
+
+const nodeClicked = (node: Node) => {
+  if (simState.value.ready && !simState.value.running) {
+    simState.value.running = true
+    simState.value.step = 0
+    simState.value.ready = false
+    const nodeIndex = nodes.value.findIndex((n) => n.id === node.id)
+    simState.value.probVector = new Array(nodes.value.length).fill(0).map((_, i) => i === nodeIndex ? 1 : 0)
+    runSimulation()
+  }
+}
+
+const runSimulation = () => {
+  const sim = setInterval(() => {
+    if (simState.value.running) {
+      simState.value.step++
+      simState.value.probVector = getStateAfterNSteps(
+        markov.value.transitionMatrix,
+        simState.value.probVector,
+        1
+      )
+    } else {
+      clearInterval(sim)
+      simState.value.probVector = []
+      simState.value.step = 0
+    }
+  }, 500)
 }
 </script>

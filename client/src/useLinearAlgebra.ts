@@ -1,8 +1,20 @@
 // @ts-ignore
 import linearAlgebra from 'linear-algebra';
 import BigNumber from 'bignumber.js';
+import { matrix, multiply } from 'mathjs';
 
 const { Matrix } = linearAlgebra();
+
+export function getStateAfterNSteps(transitionMatrix: number[][], initialState: number[], n: number) {
+  let vector = matrix(initialState);
+  const transMatrix = matrix(transitionMatrix);
+
+  for (let i = 0; i < n; i++) {
+    vector = multiply(vector, transMatrix);
+  }
+
+  return vector.toArray().map((entry) => parseFloat(Number(entry).toFixed(4)));
+}
 
 export function getSteadyStateVector(transitionMatrix: number[][], precision: number) {
   const numRows = transitionMatrix.length;

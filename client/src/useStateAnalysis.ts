@@ -14,7 +14,6 @@ type Edge = {
   from: number
   to: number
   weight: number
-  isEditing: boolean
 }
 
 // node id -> list of child node ids
@@ -163,31 +162,60 @@ const getAdjacencyMap = (nodes: Node[], edges: Edge[]) => nodes.reduce((acc, cur
     .map((edge) => edge.to)
 ), new Map() as Map<number, number[]>)
 
-const getTransitionMatrix = (adjMap: AdjacencyMap, nodes: Node[]) => Array.from(adjMap).reduce((acc, [node, children]) => {
-  // replace uniform weight with adjustable weights
-  const uniformWeight = 1 / children.length
-  const noChildMap = (n: Node) => n.id === node ? 1 : 0
-  const childMap = (n: Node) => children.includes(n.id) ? uniformWeight : 0
-  const row = children.length === 0
-    ? nodes.map(noChildMap)
-    : nodes.map(childMap)
-  acc.push(row)
-  return acc
-}, [] as number[][])
+const getWeightBetweenNodes = (from: number, to: number, edges: Edge[]) => {
+  const edge = edges.find((edge) => edge.from === from && edge.to === to)
+  return edge ? edge.weight : 0
+}
+
+const getTransitionMatrixUniform = (adjMap: AdjacencyMap, nodes: Node[]) => {
+  return Array.from(adjMap).reduce((acc, [node, children]) => {
+    const uniformWeight = 1 / children.length
+    const noChildMap = (n: Node) => n.id === node ? 1 : 0
+    const childMap = (n: Node) => children.includes(n.id) ? uniformWeight : 0
+    const row = children.length === 0
+      ? nodes.map(noChildMap)
+      : nodes.map(childMap)
+    acc.push(row)
+    return acc
+  }, [] as number[][])
+}
+
+const getTransitionMatrix = (nodes: Node[], edges: Edge[]) => {
+  return nodes.reduce((acc, { id: parentNodeId }) => {
+    const row = nodes.map((node) => getWeightBetweenNodes(parentNodeId, node.id, edges))
+    acc.push(row)
+    return acc
+  }, [] as number[][])
+}
+
+const chainValidator = (transitionMatrix: number[][], nodes: Node[]) => {
+  // valid if all rows sum to 1
+  const illegalStates = []
+
+  for (let i = 0; i < transitionMatrix.length; i++) {
+    const row = transitionMatrix[i]
+    const sum = row.reduce((acc, curr) => acc + curr, 0)
+    if (sum !== 1) {
+      illegalStates.push(nodes[i].id)
+    }
+  }
+
+  return {
+    valid: illegalStates.length === 0,
+    illegalStates,
+  }
+}
 
 export function useStateAnalysis(nodes: Ref<Node[]>, edges: Ref<Edge[]>) {
 
-  return computed(() => {
-
-    console.log('computing state analysis')
-
+  const getStateAnalysis = () => {
     const adjacencyMap = getAdjacencyMap(nodes.value, edges.value)
-    const transitionMatrix = getTransitionMatrix(adjacencyMap, nodes.value)
+    const transitionMatrix = getTransitionMatrix(nodes.value, edges.value)
 
     const {
       stronglyCoupledComponents: communicatingClasses,
       adjacencyMap: componentAdjacencyMap,
-      nodeToComponentMap,
+      nodeToComponentMap: nodeToCommunicatingClassMap,
     } = findStronglyCoupledComponents(adjacencyMap)
 
     const transientClasses = []
@@ -202,27 +230,44 @@ export function useStateAnalysis(nodes: Ref<Node[]>, edges: Ref<Edge[]>) {
     }
 
     const transientStates = transientClasses.flat()
+    const recurrentStates = recurrentClasses.flat()
 
-    const componentPeriods = recurrentClasses.map((component) => {
+    const recurrentClassPeriods = recurrentClasses.map((component) => {
       return getPeriod(component, adjacencyMap);
     })
 
-    let steadyStateVector = 'No Unique Steady State'
     // unique steady state distribution only exists if there is one aperiodic recurrent class
-    if (recurrentClasses.length === 1 && componentPeriods[0] === 1) {
-      const steadyStateVectorPrecision = 3
-      steadyStateVector = getSteadyStateVector(transitionMatrix, steadyStateVectorPrecision)
-    }
+    const uniqueSteadyState = recurrentClasses.length === 1 && recurrentClassPeriods[0] === 1
+
+    const PRECISION = 3
+    const steadyStateVector = uniqueSteadyState ? getSteadyStateVector(transitionMatrix, PRECISION) : undefined
+
+    const { valid, illegalStates } = chainValidator(transitionMatrix, nodes.value)
 
     return {
+      valid,
+      illegalStates,
+      totalStates: nodes.value.length,
       transientStates,
+      transientStateCount: transientClasses.length,
+      recurrentStates,
+      recurrentStateCount: recurrentStates.length,
       recurrentClasses,
+      recurrentClassCount: recurrentClasses.length,
       communicatingClasses,
-      nodeToComponentMap,
-      componentPeriods,
+      communicatingClassCount: communicatingClasses.length,
+      nodeToCommunicatingClassMap,
+      recurrentClassPeriods,
+      periodClassifications: recurrentClassPeriods.map((period) => period === 1 ? "APERIODIC" : "PERIODIC"),
       transitionMatrix,
       adjacencyMap,
-      steadyStateVector
+      uniqueSteadyState,
+      steadyStateVector,
     }
-  })
+  }
+
+  return {
+    state: computed(getStateAnalysis),
+    reCompute: getStateAnalysis,
+  }
 }
