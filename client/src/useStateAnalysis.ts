@@ -183,7 +183,7 @@ export function useStateAnalysis(nodes: Ref<Node[]>, edges: Ref<Edge[]>) {
     const {
       stronglyCoupledComponents: communicatingClasses,
       adjacencyMap: componentAdjacencyMap,
-      nodeToComponentMap,
+      nodeToComponentMap: nodeToCommunicatingClassMap,
     } = findStronglyCoupledComponents(adjacencyMap)
 
     const transientClasses = []
@@ -203,21 +203,29 @@ export function useStateAnalysis(nodes: Ref<Node[]>, edges: Ref<Edge[]>) {
       return getPeriod(component, adjacencyMap);
     })
 
+    const uniqueSteadyState = recurrentClasses.length === 1 && componentPeriods[0] === 1
+
     let steadyStateVector = undefined
     // unique steady state distribution only exists if there is one aperiodic recurrent class
-    if (recurrentClasses.length === 1 && componentPeriods[0] === 1) {
+    if (uniqueSteadyState) {
       const steadyStateVectorPrecision = 3
       steadyStateVector = getSteadyStateVector(transitionMatrix, steadyStateVectorPrecision)
     }
 
     return {
+      totalStates: nodes.value.length,
       transientStates,
+      transientStateCount: transientClasses.length,
       recurrentClasses,
+      recurrentClassCount: recurrentClasses.length,
       communicatingClasses,
-      nodeToComponentMap,
+      communicatingClassCount: communicatingClasses.length,
+      nodeToCommunicatingClassMap,
       componentPeriods,
+      periodClassifications: componentPeriods.map((period) => period === 1 ? "APERIODIC" : "PERIODIC"),
       transitionMatrix,
       adjacencyMap,
+      uniqueSteadyState,
       steadyStateVector
     }
   })

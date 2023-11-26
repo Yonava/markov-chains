@@ -9,7 +9,7 @@
         {{ key }}:
       </b>
       <br>
-      {{ value || 'undefined' }}
+      {{ value ?? 'undefined' }}
     </div>
   </div>
 </template>
@@ -17,7 +17,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 
-const props = defineProps<{
+defineProps<{
   markov: Record<string, any>;
 }>();
 

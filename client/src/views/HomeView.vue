@@ -387,7 +387,7 @@ const checkDeleteNode = (event: any, node: Node) => {
 
 const getColor = (node: Node) => {
 
-  const index = markov.value.nodeToComponentMap.get(node.id)
+  const index = markov.value.nodeToCommunicatingClassMap.get(node.id)
 
   if (markov.value.transientStates.includes(node.id)) return ['Gray', 'border-gray-900']
   if (index === undefined) return ['Gray', 'border-gray-900']
