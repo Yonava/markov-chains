@@ -147,7 +147,7 @@
       :style="{
         'opacity': showInfo ? 1 : 0,
         'pointer-events': showInfo ? 'all' : 'none',
-        'background-color': 'rgba(0, 0, 0, 0.4)',
+        'background-color': 'rgba(0, 0, 0, 0.6)',
       }"
       class="fixed z-50 transition-opacity duration-200 absolute top-0 left-0 w-1/3 h-full cursor-pointer"
     >
