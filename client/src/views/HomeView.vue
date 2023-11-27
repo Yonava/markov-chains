@@ -1,5 +1,5 @@
 <template>
-  <div class="absolute w-full h-full bg-gray-600">
+  <div class="absolute w-full h-full bg-gray-600" style="user-select: none;">
     <button class="fixed text-white" @click="markovOptions.uniformEdgeProbability = !markovOptions.uniformEdgeProbability">Edge Prob Toggle</button>
     <div class="flex flex-col items-center justify-center h-full p-12">
       <h1
@@ -16,19 +16,6 @@
         >
           New Node
         </button>
-
-        <button
-          @click="addEdge()"
-          class="bg-gray-800 absolute bottom-0 left-0 w-60 h-20 hover:bg-gray-900 text-white text-3xl"
-        >
-          New Edge
-        </button>
-
-        <input
-          type="text"
-          v-model="tEdgeInput"
-          class="bg-gray-800 absolute bottom-0 left-0 hover:bg-gray-900 text-white text-md"
-        >
 
         <!-- simulate -->
         <button
@@ -68,16 +55,15 @@
           @mouseleave="miniNodeState.hovered = false"
           @mousedown="miniNodeState.onTheMove = index"
           @mouseup="miniNodeDropped()"
-          class="fixed rounded-full bg-gray-800 w-6 h-6 border-4 border-black z-50 cursor-pointer"
+          class="fixed rounded-full bg-gray-800 w-6 h-6 border-4 border-black z-50 cursor-pointer hover:bg-gray-900"
           :style="node.style + '; opacity:' + (node.style ? 1 : 0)"
           :ref="(el) => (node.ref = el)"
         ></div>
-
-        <div
-          v-if="miniNodeState.onTheMove !== -1"
-          class="fixed bg-gray-900"
-          :style="computeEdgeStyleGivenNodeRefs(miniNodes[miniNodeState.onTheMove].ref, miniNodeState.startNode?.ref, 0).line"
-        >
+          <div
+            v-if="miniNodeState.onTheMove !== -1"
+            class="fixed bg-gray-900"
+            :style="computeEdgeStyleGivenNodeRefs(miniNodes[miniNodeState.onTheMove].ref, miniNodeState.startNode?.ref, 0).line"
+          >
         </div>
 
         <!-- nodes -->
@@ -86,7 +72,7 @@
           :key="node.id"
         >
           <button
-            @click="nodeClicked(node)"
+            @mousedown="nodeClicked(node)"
             @mouseover="currentNodeOnTop = node.id"
             @mouseup="checkDeleteNode($event, node)"
             :class="`fixed w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node)[1] + ' ' + (node.id === currentNodeOnTop ? 'z-40' : 'z-10')"
@@ -96,7 +82,7 @@
             <div
               @mouseover="initMiniNodes(node)"
               @mouseleave="removeMiniNodesByNodeLeave()"
-              class="border border-red-500 w-28 h-28 absolute rounded-full"
+              class="w-28 h-28 absolute rounded-full"
             ></div>
             <span
               v-if="!simState.running"
@@ -146,8 +132,6 @@
           </div>
         </div>
       </div>
-
-      {{ miniNodes.length }}
 
     </div>
 
@@ -207,13 +191,25 @@ const initMiniNodes = async (startNode: Node) => {
   // reset miniNodeState
   miniNodeState.value.reset()
   miniNodeState.value.startNode = startNode
+
+  const startNodeX = startNode.ref.getBoundingClientRect().x
+  const startNodeY = startNode.ref.getBoundingClientRect().y
+
   miniNodes.value = new Array(4).fill(0).map((_) => ({} as MiniNode))
   await new Promise((resolve) => setTimeout(resolve, 0))
+
+  const offsets = [
+    { x: 25, y: -15 }, // top
+    { x: 70, y: 30 }, // right
+    { x: -15, y: 25 }, // left
+    { x: 25, y: 70 }, // bottom
+  ]
+
   miniNodes.value.forEach((node, index) => {
     const { style } = useDraggable(node.ref, {
       initialValue: {
-        x: 100 + index * 100,
-        y: 100,
+        x: startNodeX + offsets[index].x,
+        y: startNodeY + offsets[index].y,
       },
     })
     miniNodes.value[index].style = style
@@ -221,6 +217,37 @@ const initMiniNodes = async (startNode: Node) => {
 }
 
 const miniNodeDropped = () => {
+  const startNode = miniNodeState.value.startNode
+  const miniNode = miniNodes.value[miniNodeState.value.onTheMove].ref
+
+  if (!startNode || !miniNode) {
+    throw new Error('startNode or miniNode is null')
+  }
+
+  const miniNodeRect = miniNode.getBoundingClientRect()
+
+  // loop through nodes and see if any are in miniNodeRect with a high tolerance threshold
+  const nodeInMiniNodeRect = nodes.value.find((node) => {
+    const nodeRect = node.ref.getBoundingClientRect()
+    const tolerance = 60
+    return (
+      nodeRect.x > miniNodeRect.x - tolerance &&
+      nodeRect.x < miniNodeRect.x + miniNodeRect.width + tolerance &&
+      nodeRect.y > miniNodeRect.y - tolerance &&
+      nodeRect.y < miniNodeRect.y + miniNodeRect.height + tolerance
+    )
+  })
+
+  if (nodeInMiniNodeRect) {
+    // add edge from startNode to nodeInMiniNodeRect
+    addEdge({
+      from: startNode.id,
+      to: nodeInMiniNodeRect.id,
+      weight: 1,
+    })
+  }
+
+  // get the node that was dropped on
   miniNodes.value = []
   miniNodeState.value.reset()
 }
@@ -255,33 +282,32 @@ const {
   reCompute: reComputeMarkov,
 } = useStateAnalysis(nodes, edges, markovOptions)
 
-const tEdgeInput = ref('')
 
-const addEdge = (options?: {
+const addEdge = (options: {
   to: number
   from: number
   weight: number
 }) => {
 
-  const { to, from, weight } = options ?? {
-    from: parseInt(tEdgeInput.value.split(' ')[0]),
-    to: parseInt(tEdgeInput.value.split(' ')[1]),
-    weight: 1,
-  }
+  const edgeAlreadyExists = edges.value.find((edge) => {
+    return edge.from === options.from && edge.to === options.to
+  })
+
+  if (edgeAlreadyExists) return
 
   const edge: Edge = {
     id: edges.value.length,
-    from,
-    to,
-    weight,
+    from: options.from,
+    to: options.to,
+    weight: options.weight,
   }
 
   edges.value.push(edge)
 }
 
-const currentNodeOnTop = ref<Number>(-1)
+const currentNodeOnTop = ref(-1)
 
-const currentEdgeBeingEdited = ref<Number>(-1)
+const currentEdgeBeingEdited = ref(-1)
 
 const startEditing = (edgeId: number) => {
   currentEdgeBeingEdited.value = edgeId
@@ -448,8 +474,8 @@ const addNode = async () => {
 
   const { style } = useDraggable(node.ref, {
     initialValue: {
-      x: Math.floor(Math.random() * 1000),
-      y: Math.floor(Math.random() * 1000)
+      x: 250 + Math.floor(Math.random() * 500),
+      y: 250 + Math.floor(Math.random() * 500)
     },
   })
 
@@ -513,6 +539,7 @@ const simState = ref({
 })
 
 const nodeClicked = (node: Node) => {
+  removeMiniNodesByNodeLeave()
   if (simState.value.ready && !simState.value.running) {
     simState.value.running = true
     simState.value.step = 0
