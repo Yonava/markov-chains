@@ -39,6 +39,12 @@
         >
           Select A Node
         </button>
+        <button
+          @click="showInfo = !showInfo"
+          class="bg-gray-800 absolute bottom-0 left-0 w-60 h-20 hover:bg-gray-900 text-white text-3xl z-10"
+        >
+          {{ showInfo ? 'Hide' : 'Show' }} Info
+        </button>
 
         <!-- node killer -->
         <div
@@ -162,6 +168,8 @@ type Edge = {
   to: number
   weight: number
 }
+
+const showInfo = ref(false)
 
 const nodesCreated = ref(0)
 
