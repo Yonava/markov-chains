@@ -1,7 +1,9 @@
 <template>
-  <div class="absolute w-full h-full bg-gray-600">
+  <div class="absolute w-full h-full bg-gray-600" style="user-select: none;">
+    <button class="fixed text-white" @click="markovOptions.uniformEdgeProbability = !markovOptions.uniformEdgeProbability">Edge Prob Toggle</button>
     <div class="flex flex-col items-center justify-center h-full p-12">
       <h1
+        @click="generateNewNodesAndEdges"
         class="text-5xl font-bold text-white mb-5"
       >
         Create A Markov Chain
@@ -14,19 +16,6 @@
         >
           New Node
         </button>
-
-        <button
-          @click="addEdge"
-          class="bg-gray-800 absolute bottom-0 left-0 w-60 h-20 hover:bg-gray-900 text-white text-3xl"
-        >
-          New Edge
-        </button>
-
-        <input
-          type="text"
-          v-model="tEdgeInput"
-          class="bg-gray-800 absolute bottom-0 left-0 hover:bg-gray-900 text-white text-md"
-        >
 
         <!-- simulate -->
         <button
@@ -59,19 +48,42 @@
           {{ killBoxMessage }}
         </div>
 
+        <!-- mini nodes -->
+        <div
+          v-for="(node, index) in miniNodes"
+          @mouseover="miniNodeState.hovered = true"
+          @mouseleave="miniNodeState.hovered = false"
+          @mousedown="miniNodeState.onTheMove = index"
+          @mouseup="miniNodeDropped()"
+          class="fixed rounded-full bg-gray-800 w-6 h-6 border-4 border-black z-50 cursor-pointer hover:bg-gray-900"
+          :style="node.style + '; opacity:' + (node.style ? 1 : 0)"
+          :ref="(el) => (node.ref = el)"
+        ></div>
+          <div
+            v-if="miniNodeState.onTheMove !== -1"
+            class="fixed bg-gray-900"
+            :style="computeEdgeStyleGivenNodeRefs(miniNodes[miniNodeState.onTheMove].ref, miniNodeState.startNode?.ref, 0).line"
+          >
+        </div>
+
         <!-- nodes -->
         <div
           v-for="(node, index) in nodes"
           :key="node.id"
         >
           <button
-            @click="nodeClicked(node)"
-            @mousedown="currentNodeOnTop = node.id"
+            @mousedown="nodeClicked(node)"
+            @mouseover="currentNodeOnTop = node.id"
             @mouseup="checkDeleteNode($event, node)"
-            :class="`fixed w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node)[1] + ' ' + (node.id === currentNodeOnTop ? 'z-50' : 'z-10')"
+            :class="`fixed w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node)[1] + ' ' + (node.id === currentNodeOnTop ? 'z-40' : 'z-10')"
             :style="node.style + '; opacity:' + (node.style ? 1 : 0)"
             :ref="(el) => (node.ref = el)"
           >
+            <div
+              @mouseover="initMiniNodes(node)"
+              @mouseleave="removeMiniNodesByNodeLeave()"
+              class="w-28 h-28 absolute rounded-full"
+            ></div>
             <span
               v-if="!simState.running"
               class="text-white text-3xl"
@@ -85,7 +97,6 @@
               {{ simState.probVector[index] }}
             </span>
           </button>
-
         </div>
 
         <!-- edges -->
@@ -100,21 +111,23 @@
             <div
               :style="computeEdgeStyle(edge).arrow"
             >
-              <p
-                v-if="edge.id !== currentEdgeBeingEdited"
-                @dblclick="startEditing(edge.id)"
-                :style="computeEdgeStyle(edge).weight"
-                class="text-white"
-              >{{ edge.weight }}</p>
-              <input
-                v-else
-                @blur="stopEditing()"
-                @keyup.enter="stopEditing()"
-                :v-model="edge.weight"
-                :style="computeEdgeStyle(edge).weight"
-                type="text"
-                v-model.number="edge.weight"
-              >
+              <div v-if="!markovOptions.uniformEdgeProbability">
+                <p
+                  v-if="edge.id !== currentEdgeBeingEdited"
+                  @dblclick="startEditing(edge.id)"
+                  :style="computeEdgeStyle(edge).weight"
+                  class="text-white"
+                >{{ edge.weight }}</p>
+                <input
+                  v-else
+                  @blur="stopEditing()"
+                  @keyup.enter="stopEditing()"
+                  :v-bind="edge.weight"
+                  :style="computeEdgeStyle(edge).weight"
+                  type="text"
+                  v-model.number="edge.weight"
+                >
+              </div>
             </div>
           </div>
         </div>
@@ -125,9 +138,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, type ComponentPublicInstance } from 'vue'
+import { ref, type ComponentPublicInstance, type ComputedRef, type MaybeRefOrGetter } from 'vue'
 import { useDraggable } from '@vueuse/core'
-import { useStateAnalysis } from '@/useStateAnalysis';
+import { useStateAnalysis, transitionMatrixToNodesAndEdges } from '@/useStateAnalysis';
 import { getStateAfterNSteps } from '@/useLinearAlgebra';
 import DebugScreen from '@/components/DebugScreen.vue';
 
@@ -153,91 +166,146 @@ const nodesCreated = ref(0)
 const nodes = ref<Node[]>([])
 const edges = ref<Edge[]>([])
 
+type MiniNode = {
+  ref: MaybeRefOrGetter
+  style: ComputedRef
+}
+
+let miniNodes = ref<MiniNode[]>([])
+
+const miniNodeState = ref({
+  hovered: false,
+  onTheMove: -1,
+  startNode: null as Node | null,
+  reset: () => {
+    miniNodeState.value.onTheMove = -1
+    miniNodeState.value.hovered = false
+    miniNodeState.value.startNode = null
+  }
+})
+
+const initMiniNodes = async (startNode: Node) => {
+  if (miniNodes.value.length > 0) return
+  // reset miniNodeState
+  miniNodeState.value.reset()
+  miniNodeState.value.startNode = startNode
+
+  const startNodeX = startNode.ref.getBoundingClientRect().x
+  const startNodeY = startNode.ref.getBoundingClientRect().y
+
+  miniNodes.value = new Array(4).fill(0).map((_) => ({} as MiniNode))
+  await new Promise((resolve) => setTimeout(resolve, 0))
+
+  const offsets = [
+    { x: 25, y: -15 }, // top
+    { x: 70, y: 30 }, // right
+    { x: -15, y: 25 }, // left
+    { x: 25, y: 70 }, // bottom
+  ]
+
+  miniNodes.value.forEach((node, index) => {
+    const { style } = useDraggable(node.ref, {
+      initialValue: {
+        x: startNodeX + offsets[index].x,
+        y: startNodeY + offsets[index].y,
+      },
+    })
+    miniNodes.value[index].style = style
+  })
+}
+
+const miniNodeDropped = () => {
+  const startNode = miniNodeState.value.startNode
+  const miniNode = miniNodes.value[miniNodeState.value.onTheMove].ref
+
+  if (!startNode || !miniNode) {
+    throw new Error('startNode or miniNode is null')
+  }
+
+  const miniNodeRect = miniNode.getBoundingClientRect()
+
+  // loop through nodes and see if any are in miniNodeRect with a high tolerance threshold
+  const nodeInMiniNodeRect = nodes.value.find((node) => {
+    const nodeRect = node.ref.getBoundingClientRect()
+    const tolerance = 60
+    return (
+      nodeRect.x > miniNodeRect.x - tolerance &&
+      nodeRect.x < miniNodeRect.x + miniNodeRect.width + tolerance &&
+      nodeRect.y > miniNodeRect.y - tolerance &&
+      nodeRect.y < miniNodeRect.y + miniNodeRect.height + tolerance
+    )
+  })
+
+  if (nodeInMiniNodeRect) {
+    // add edge from startNode to nodeInMiniNodeRect
+    addEdge({
+      from: startNode.id,
+      to: nodeInMiniNodeRect.id,
+      weight: 1,
+    })
+  }
+
+  // get the node that was dropped on
+  miniNodes.value = []
+  miniNodeState.value.reset()
+}
+
+const removeMiniNodesByNodeLeave = async () => {
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  if (miniNodeState.value.onTheMove !== -1 || miniNodeState.value.hovered) return
+  miniNodes.value = []
+}
+
+const generateNewNodesAndEdges = () => {
+  nodes.value = []
+  edges.value = []
+  nodesCreated.value = 0
+  const matrixSize = Math.floor(Math.random() * 10) + 1
+  const edgeValue = () => Math.random() < 1 / matrixSize ? Number(Math.random().toFixed(2)) : 0
+  const newTransitionMatrix = new Array(matrixSize).fill(0).map(() => new Array(matrixSize).fill(0).map(() => edgeValue()))
+  transitionMatrixToNodesAndEdges(
+    newTransitionMatrix,
+    addNode,
+    addEdge
+  )
+}
+
+const markovOptions = ref({
+  uniformEdgeProbability: false,
+  steadyStatePrecision: 3
+})
+
 const {
   state: markov,
   reCompute: reComputeMarkov,
-} = useStateAnalysis(nodes, edges)
+} = useStateAnalysis(nodes, edges, markovOptions)
 
-const tEdgeInput = ref('')
 
-const addEdge = () => {
+const addEdge = (options: {
+  to: number
+  from: number
+  weight: number
+}) => {
 
-  const [from, to] = tEdgeInput.value.split(' ').map((n) => parseInt(n))
+  const edgeAlreadyExists = edges.value.find((edge) => {
+    return edge.from === options.from && edge.to === options.to
+  })
+
+  if (edgeAlreadyExists) return
 
   const edge: Edge = {
     id: edges.value.length,
-    from,
-    to,
-    weight: 1,
+    from: options.from,
+    to: options.to,
+    weight: options.weight,
   }
 
   edges.value.push(edge)
 }
 
-const edgeAngleMap = ref(new Map<number, {
-  edgeId: number,
-  angle: number,
-}[]>())
+const currentNodeOnTop = ref(-1)
 
-const addToEdgeAngleMap = (nodeId: number, edgeId: number, angle: number): void => {
-  // check if node in map
-  // if no, add it
-  // if yes check if edge id in  list
-  // if yes, update
-  // if no, add it
-  
-  const currentNode = edgeAngleMap.value.get(nodeId) || []
-
-  if (currentNode.find(edge => edge.edgeId === edgeId) === undefined) {
-    edgeAngleMap.value.set(nodeId, [...currentNode, {
-      edgeId: edgeId,
-      angle: angle
-    }])
-  } else {
-    const index = currentNode.findIndex(edge => edge.edgeId === edgeId);
-    if (index !== -1) currentNode[index].angle = angle
-  }
-}
-
-const deleteFromEdgeAngleMap = (nodeId: number) => {
-  edgeAngleMap.value.delete(nodeId);
-}
-
-const getOpenSpace = (angles: {
-  edgeId: number,
-  angle: number,
-}[]): number => {
-  // does not work for more than 2 edges
-
-  // all in degrees
-  if (angles.length === 0) return 0
-  if (angles.length === 1) return angles[0].angle + 90
-
-  let maxDifference = -Infinity
-  let maxDifferenceIndex = 0
-
-  for (let i = 0; i < angles.length; i++) {
-    for (let j = i + 1; j < angles.length; j++) {
-      const currentAngle = angles[i].angle
-      const nextAngle = angles[j].angle
-      const difference = (nextAngle - currentAngle + 360) % 360 // Circular difference
-
-      if (difference > maxDifference) {
-        maxDifference = difference
-        maxDifferenceIndex = i
-      }
-    }
-  }
-  
-  // Calculate the circular average angle between the two angles
-  const averageAngle = angles[maxDifferenceIndex].angle + maxDifference / 2
-  return (averageAngle + 90) % 360 + 180
-}
-
-
-const currentNodeOnTop = ref<Number>(-1)
-
-const currentEdgeBeingEdited = ref<Number>(-1)
+const currentEdgeBeingEdited = ref(-1)
 
 const startEditing = (edgeId: number) => {
   currentEdgeBeingEdited.value = edgeId
@@ -247,14 +315,11 @@ const stopEditing = () => {
   currentEdgeBeingEdited.value = -1
 }
 
-const computeEdgeStyle = (edge: Edge) => {
-  const fromNode = nodes.value.find((n) => n.id === edge.from)
-  const toNode = nodes.value.find((n) => n.id === edge.to)
+const computeEdgeStyleGivenNodeRefs = (toNodeRef: any, fromNodeRef: any, offset = 60) => {
+  if (!toNodeRef || !fromNodeRef) return {}
 
-  if (!fromNode || !toNode) return {}
-
-  const fromRect = fromNode.ref.getBoundingClientRect()
-  const toRect = toNode.ref.getBoundingClientRect()
+  const fromRect = fromNodeRef.getBoundingClientRect()
+  const toRect = toNodeRef.getBoundingClientRect()
 
   const x1 = fromRect.x + fromRect.width / 2
   const y1 = fromRect.y + fromRect.height / 2
@@ -292,6 +357,64 @@ const computeEdgeStyle = (edge: Edge) => {
     }
   }
   
+  const { distanceX, distanceY }  = calculatePerpendicularOffset(radians, 10)
+
+  const unitX = distanceX / Math.sqrt(distanceX ** 2 + distanceY ** 2)
+  const unitY = distanceY / Math.sqrt(distanceX ** 2 + distanceY ** 2)
+
+  const arrow = {
+    width: 0,
+    height: 0,
+    transform: `translate(${length - 60}px, -16px)`,
+    'border-top': '20px solid transparent',
+    'border-bottom': '20px solid transparent',
+    'border-left': '20px solid rgb(17 24 39)',
+  }
+
+  const weight = {
+    transform: `rotate(${-1 * angle}deg) translate(${-Math.cos(radians) * length / 3}px, ${-Math.sin(radians) * length / 3}px)`
+  }
+
+  const line = {
+    width: `${length - offset}px`,
+    height: '8px',
+    transform: `rotate(${angle}deg)`,
+    transformOrigin: '0 0',
+    top: `${y1 - unitY * 4}px`,
+    left: `${x1 - unitX * 4}px`,
+  }
+
+  return {
+    line,
+    arrow,
+    weight,
+    y1,
+    x1,
+    distanceX,
+    distanceY,
+    radians,
+  }
+}
+
+const computeEdgeStyle = (edge: Edge) => {
+  const fromNode = nodes.value.find((n) => n.id === edge.from)
+  const toNode = nodes.value.find((n) => n.id === edge.to)
+
+  if (!fromNode || !toNode) return {}
+
+  const {
+    line,
+    arrow,
+    weight,
+    y1,
+    x1,
+    distanceX,
+    distanceY,
+    radians,
+  } = computeEdgeStyleGivenNodeRefs(toNode.ref, fromNode.ref)
+
+  const curveRadius = 25
+
   if (edge.from === edge.to) {
     const curveRadius = 25
     // const openSpaceAngle = getOpenSpace(edgeAngleMap.value.get(edge.to) ?? [])
@@ -333,84 +456,30 @@ const computeEdgeStyle = (edge: Edge) => {
   const isBidirectional = ingoingNodeChildren.includes(edge.from) && outgoingNodeChildren.includes(edge.to)
   const { distanceX, distanceY } = calculatePerpendicularOffset(radians, 10)
 
+  const bidirectionalAdjustment = {
+    top: `${y1 + distanceY}px`,
+    left: `${x1 + distanceX}px`,
+  }
+
   if (isBidirectional) {
-    if (edge.from < edge.to) {
-      return {
-        line: {
-          width: `${length - 60}px`,
-          height: '8px',
-          transform: `rotate(${angle}deg)`,
-          transformOrigin: `0 0`,
-          top: `${y1 + distanceY}px`,
-          left: `${x1 + distanceX}px`,
-        },
-        arrow: {
-          width: 0,
-          height: 0,
-          transform: `translate(${length - 60}px, -16px)`,
-          'border-top': '20px solid transparent',
-          'border-bottom': '20px solid transparent',
-          'border-left': '20px solid rgb(17 24 39)',
-        },
-        weight: {
-          transform: `rotate(${-1 * angle}deg) translate(${-Math.cos(radians) * length / 3}px, ${-Math.sin(radians) * length / 3}px)`
-        }
-      }
-    } else {
-      return {
-        line: {
-          width: `${length - 60}px`,
-          height: '8px',
-          transform: `rotate(${angle}deg)`,
-          transformOrigin: `0 0`,
-          top: `${y1 + distanceY}px`,
-          left: `${x1 + distanceX}px`,
-        },
-        arrow: {
-          width: 0,
-          height: 0,
-          transform: `translate(${length - 60}px, -16px)`,
-          'border-top': '20px solid transparent',
-          'border-bottom': '20px solid transparent',
-          'border-left': '20px solid rgb(17 24 39)',
-        },
-        weight: {
-          transform: `rotate(${-1 * angle}deg) translate(${-Math.cos(radians) * length / 3}px, ${-Math.sin(radians) * length / 3}px)`
-        }
-      }
-    }
+    line.top = bidirectionalAdjustment.top
+    line.left = bidirectionalAdjustment.left
   }
 
   const unitX = distanceX / Math.sqrt(distanceX ** 2 + distanceY ** 2)
   const unitY = distanceY / Math.sqrt(distanceX ** 2 + distanceY ** 2)
   return {
-    line: {
-      width: `${length - 60}px`,
-      height: '8px',
-      transform: `rotate(${angle}deg)`,
-      transformOrigin: '0 0',
-      top: `${y1 - unitY * 4}px`,
-      left: `${x1 - unitX * 4}px`,
-    },
-    arrow: {
-      width: 0,
-      height: 0,
-      transform: `translate(${length - 60}px, -16px)`,
-      'border-top': '20px solid transparent',
-      'border-bottom': '20px solid transparent',
-      'border-left': '20px solid rgb(17 24 39)',
-    },
-    weight: {
-      transform: `rotate(${-1 * angle}deg) translate(${-Math.cos(radians) * length / 3}px, ${-Math.sin(radians) * length / 3}px)`
-    }
+    line,
+    arrow,
+    weight
   }
-
 }
 
 const killBox = ref(null)
 const killBoxMessage = ref('Delete Node')
 
 const addNode = async () => {
+
   const node: Node = {
     id: nodesCreated.value++,
     style: null,
@@ -424,8 +493,8 @@ const addNode = async () => {
 
   const { style } = useDraggable(node.ref, {
     initialValue: {
-      x: Math.floor(Math.random() * 1000),
-      y: Math.floor(Math.random() * 1000)
+      x: 250 + Math.floor(Math.random() * 500),
+      y: 250 + Math.floor(Math.random() * 500)
     },
   })
 
@@ -492,6 +561,7 @@ const simState = ref({
 })
 
 const nodeClicked = (node: Node) => {
+  removeMiniNodesByNodeLeave()
   if (simState.value.ready && !simState.value.running) {
     simState.value.running = true
     simState.value.step = 0
