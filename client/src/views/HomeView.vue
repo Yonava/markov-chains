@@ -53,7 +53,7 @@
           v-for="(node, index) in miniNodes"
           :key="index"
           @mouseover="miniNodeState.hovered = true"
-          @mouseleave="miniNodeState.hovered = false, miniNodeState.onTheMove ? null : miniNodeDropped() /* prevents ghosting on slow move over w/o click */"
+          @mouseleave="miniNodeState.hovered = false"
           @mousedown="miniNodeState.onTheMove = index"
           @mouseup="miniNodeDropped()"
           class="fixed rounded-full bg-gray-900 w-6 h-6 z-50 cursor-pointer hover:border hover:border-gray-900 hover:border-4 hover:bg-gray-800"
