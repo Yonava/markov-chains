@@ -74,7 +74,7 @@
         >
           <button
             @mousedown="nodeClicked(node)"
-            @mouseover="currentNodeOnTop = node.id"
+            @mouseover="updateNodeOnTop(node.id)"
             @mouseup="checkDeleteNode($event, node); initMiniNodes(node)"
             :class="`fixed w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node)[1] + ' ' + ((node.id === currentNodeOnTop) ? 'z-40' : 'z-10')"
             :style="node.style + '; opacity:' + (node.style ? 1 : 0)"
@@ -307,6 +307,11 @@ const addEdge = (options: {
 }
 
 const currentNodeOnTop = ref(-1)
+
+const updateNodeOnTop = (nodeId: number) => {
+  if (miniNodeState.value.onTheMove !== -1) return
+  currentNodeOnTop.value = nodeId
+}
 
 const currentEdgeBeingEdited = ref(-1)
 
