@@ -56,7 +56,7 @@
           @mouseleave="miniNodeState.hovered = false"
           @mousedown="miniNodeState.onTheMove = index"
           @mouseup="miniNodeDropped()"
-          class="fixed rounded-full bg-gray-900 w-6 h-6 z-50 cursor-pointer hover:border hover:border-gray-900 hover:border-4 hover:bg-gray-800"
+          class="fixed rounded-full bg-gray-900 w-6 h-6 z-50 cursor-pointer border-4 border-gray-900 scale-90 hover:scale-110 hover:bg-gray-800 transition ease-in-out duration-200"
           :style="node.style + '; opacity:' + (node.style ? 1 : 0)"
           :ref="(el) => (node.ref = el)"
         ></div>
@@ -200,10 +200,10 @@ const initMiniNodes = async (startNode: Node) => {
   await new Promise((resolve) => setTimeout(resolve, 0))
 
   const offsets = [
-    { x: 28, y: -15 }, // top
-    { x: 70, y: 30 }, // right
-    { x: -15, y: 30 }, // left
-    { x: 28, y: 70 }, // bottom
+    { x: 28, y: -10 }, // top
+    { x: 65, y: 30 }, // right
+    { x: -10, y: 30 }, // left
+    { x: 28, y: 65 }, // bottom
   ]
 
   miniNodes.value.forEach((node, index) => {
@@ -230,7 +230,7 @@ const miniNodeDropped = () => {
   // loop through nodes and see if any are in miniNodeRect with a high tolerance threshold
   const nodeInMiniNodeRect = nodes.value.find((node) => {
     const nodeRect = node.ref.getBoundingClientRect()
-    const tolerance = 70
+    const tolerance = 60
     return (
       nodeRect.x > miniNodeRect.x - tolerance &&
       nodeRect.x < miniNodeRect.x + miniNodeRect.width + tolerance &&
