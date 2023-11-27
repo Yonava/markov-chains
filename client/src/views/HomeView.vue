@@ -51,17 +51,18 @@
         <!-- mini nodes -->
         <div
           v-for="(node, index) in miniNodes"
+          :key="index"
           @mouseover="miniNodeState.hovered = true"
           @mouseleave="miniNodeState.hovered = false"
           @mousedown="miniNodeState.onTheMove = index"
           @mouseup="miniNodeDropped()"
-          class="fixed rounded-full bg-gray-800 w-6 h-6 border-4 border-black z-50 cursor-pointer hover:bg-gray-900"
+          class="fixed rounded-full bg-gray-900 w-6 h-6 z-50 cursor-pointer hover:border hover:border-gray-900 hover:border-4 hover:bg-gray-800"
           :style="node.style + '; opacity:' + (node.style ? 1 : 0)"
           :ref="(el) => (node.ref = el)"
         ></div>
           <div
             v-if="miniNodeState.onTheMove !== -1"
-            class="fixed bg-gray-900"
+            class="fixed bg-gray-900 z-30"
             :style="computeEdgeStyleGivenNodeRefs(miniNodes[miniNodeState.onTheMove].ref, miniNodeState.startNode?.ref, 0).line"
           >
         </div>
@@ -75,14 +76,14 @@
             @mousedown="nodeClicked(node)"
             @mouseover="currentNodeOnTop = node.id"
             @mouseup="checkDeleteNode($event, node); initMiniNodes(node)"
-            :class="`fixed w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node)[1] + ' ' + (node.id === currentNodeOnTop ? 'z-40' : 'z-10')"
+            :class="`fixed w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node)[1] + ' ' + ((node.id === currentNodeOnTop) ? 'z-40' : 'z-10')"
             :style="node.style + '; opacity:' + (node.style ? 1 : 0)"
             :ref="(el) => (node.ref = el)"
           >
             <div
               @mouseover="initMiniNodes(node)"
               @mouseleave="removeMiniNodesByNodeLeave()"
-              class="w-28 h-28 absolute rounded-full"
+              class="w-20 h-20 absolute rounded-full"
             ></div>
             <span
               v-if="!simState.running"
@@ -199,10 +200,10 @@ const initMiniNodes = async (startNode: Node) => {
   await new Promise((resolve) => setTimeout(resolve, 0))
 
   const offsets = [
-    { x: 25, y: -15 }, // top
+    { x: 28, y: -15 }, // top
     { x: 70, y: 30 }, // right
-    { x: -15, y: 25 }, // left
-    { x: 25, y: 70 }, // bottom
+    { x: -15, y: 30 }, // left
+    { x: 28, y: 70 }, // bottom
   ]
 
   miniNodes.value.forEach((node, index) => {
