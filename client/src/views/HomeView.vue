@@ -317,6 +317,67 @@ const stopEditing = () => {
   currentEdgeBeingEdited.value = -1
 }
 
+const edgeAngleMap = ref(new Map<number, {
+  edgeId: number,
+  angle: number,
+}[]>())
+
+
+const addToEdgeAngleMap = (nodeId: number, edgeId: number, angle: number): void => {
+  // check if node in map
+  // if no, add it
+  // if yes check if edge id in  list
+  // if yes, update
+  // if no, add it
+
+  const currentNode = edgeAngleMap.value.get(nodeId) || []
+
+  if (currentNode.find(edge => edge.edgeId === edgeId) === undefined) {
+    edgeAngleMap.value.set(nodeId, [...currentNode, {
+      edgeId: edgeId,
+      angle: angle
+    }])
+  } else {
+    const index = currentNode.findIndex(edge => edge.edgeId === edgeId);
+    if (index !== -1) currentNode[index].angle = angle
+  }
+}
+
+const deleteFromEdgeAngleMap = (nodeId: number) => {
+  edgeAngleMap.value.delete(nodeId);
+}
+
+const getOpenSpace = (angles: {
+  edgeId: number,
+  angle: number,
+}[]): number => {
+  // does not work for more than 2 edges
+
+  // all in degrees
+  if (angles.length === 0) return 0
+  if (angles.length === 1) return angles[0].angle + 90
+
+  let maxDifference = -Infinity
+  let maxDifferenceIndex = 0
+
+  for (let i = 0; i < angles.length; i++) {
+    for (let j = i + 1; j < angles.length; j++) {
+      const currentAngle = angles[i].angle
+      const nextAngle = angles[j].angle
+      const difference = (nextAngle - currentAngle + 360) % 360 // Circular difference
+
+      if (difference > maxDifference) {
+        maxDifference = difference
+        maxDifferenceIndex = i
+      }
+    }
+  }
+
+  // Calculate the circular average angle between the two angles
+  const averageAngle = angles[maxDifferenceIndex].angle + maxDifference / 2
+  return (averageAngle + 90) % 360 + 180
+}
+
 const computeEdgeStyleGivenNodeRefs = (toNodeRef: any, fromNodeRef: any, offset = 60) => {
   if (!toNodeRef || !fromNodeRef) return {}
 
