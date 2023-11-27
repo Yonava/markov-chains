@@ -53,7 +53,7 @@
           v-for="(node, index) in miniNodes"
           :key="index"
           @mouseover="miniNodeState.hovered = true"
-          @mouseleave="miniNodeState.hovered = false"
+          @mouseleave="miniNodeState.hovered = false, miniNodeState.onTheMove ? null : miniNodeDropped() /* prevents ghosting on slow move over w/o click */"
           @mousedown="miniNodeState.onTheMove = index"
           @mouseup="miniNodeDropped()"
           class="fixed rounded-full bg-gray-900 w-6 h-6 z-50 cursor-pointer hover:border hover:border-gray-900 hover:border-4 hover:bg-gray-800"
@@ -83,7 +83,7 @@
             <div
               @mouseover="initMiniNodes(node)"
               @mouseleave="removeMiniNodesByNodeLeave()"
-              class="w-20 h-20 absolute rounded-full"
+              class="w-28 h-28 absolute rounded-full"
             ></div>
             <span
               v-if="!simState.running"
