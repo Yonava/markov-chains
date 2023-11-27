@@ -117,23 +117,12 @@
             <div
               :style="computeEdgeStyle(edge).arrow"
             >
-              <div v-if="!markovOptions.uniformEdgeProbability">
-                <p
-                  v-if="edge.id !== currentEdgeBeingEdited"
-                  @dblclick="startEditing(edge.id)"
-                  :style="computeEdgeStyle(edge).weight"
-                  class="text-white"
-                >{{ edge.weight }}</p>
-                <input
-                  v-else
-                  @blur="stopEditing()"
-                  @keyup.enter="stopEditing()"
-                  :v-bind="edge.weight"
-                  :style="computeEdgeStyle(edge).weight"
-                  type="text"
-                  v-model.number="edge.weight"
-                >
-              </div>
+              <input
+                v-if="!markovOptions.uniformEdgeProbability"
+                v-model.number="edge.weight"
+                :style="computeEdgeStyle(edge).weight"
+                class="w-8 bg-transparent text-white font-bold text-xl"
+              />
             </div>
           </div>
         </div>
@@ -210,7 +199,9 @@ const miniNodeState = ref({
 })
 
 const initMiniNodes = async (startNode: Node) => {
-  if (miniNodes.value.length > 0) return
+
+  if (miniNodeState.value.onTheMove !== -1) return
+
   // reset miniNodeState
   miniNodeState.value.reset()
   miniNodeState.value.startNode = startNode
@@ -288,6 +279,10 @@ const generateNewNodesAndEdges = () => {
   const matrixSize = Math.floor(Math.random() * 10) + 1
   const edgeValue = () => Math.random() < 1 / matrixSize ? Number(Math.random().toFixed(2)) : 0
   const newTransitionMatrix = new Array(matrixSize).fill(0).map(() => new Array(matrixSize).fill(0).map(() => edgeValue()))
+  // const matrix = [
+  //   [0.8, 0.2],
+  //   [0.6, 0.4]
+  // ]
   transitionMatrixToNodesAndEdges(
     newTransitionMatrix,
     addNode,
@@ -330,17 +325,7 @@ const addEdge = (options: {
 
 const currentNodeOnTop = ref(-1)
 
-const currentEdgeBeingEdited = ref(-1)
-
-const startEditing = (edgeId: number) => {
-  currentEdgeBeingEdited.value = edgeId
-}
-const stopEditing = () => {
-  reComputeMarkov()
-  currentEdgeBeingEdited.value = -1
-}
-
-const computeEdgeStyleGivenNodeRefs = (toNodeRef: any, fromNodeRef: any, offset = 60) => {
+const computeEdgeStyleGivenNodeRefs = (toNodeRef: any, fromNodeRef: any, offset = 60, z = 0) => {
   if (!toNodeRef || !fromNodeRef) return {}
 
   const fromRect = fromNodeRef.getBoundingClientRect()
@@ -386,6 +371,7 @@ const computeEdgeStyleGivenNodeRefs = (toNodeRef: any, fromNodeRef: any, offset 
   }
 
   const line = {
+    zIndex: z,
     width: `${length - offset}px`,
     height: '8px',
     transform: `rotate(${angle}deg)`,
@@ -507,6 +493,9 @@ const addNode = async () => {
 }
 
 const checkDeleteNode = (event: any, node: Node) => {
+
+  removeMiniNodesByNodeLeave()
+
   // see if node is in kill box
   const killBoxRect = killBox.value.getBoundingClientRect()
   const nodeRect = event.target.getBoundingClientRect()
