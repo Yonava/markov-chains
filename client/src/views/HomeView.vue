@@ -173,6 +173,12 @@ type Edge = {
   weight: number
 }
 
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'i') {
+    showInfo.value = !showInfo.value
+  }
+})
+
 const showInfo = ref(false)
 
 const nodesCreated = ref(0)
