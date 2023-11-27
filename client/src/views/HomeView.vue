@@ -81,7 +81,7 @@
             @mousedown="nodeClicked(node)"
             @mouseover="currentNodeOnTop = node.id"
             @mouseup="checkDeleteNode($event, node); initMiniNodes(node)"
-            :class="`fixed w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node)[1] + ' ' + (node.id === currentNodeOnTop ? 'z-40' : 'z-10')"
+            :class="`fixed w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node, markov)[1] + ' ' + (node.id === currentNodeOnTop ? 'z-40' : 'z-10')"
             :style="node.style + '; opacity:' + (node.style ? 1 : 0)"
             :ref="(el) => (node.ref = el)"
           >
@@ -142,6 +142,19 @@
     </div>
 
     <DebugScreen :markov="markov" />
+    <div
+      @click="showInfo = false"
+      :style="{
+        'opacity': showInfo ? 1 : 0,
+        'pointer-events': showInfo ? 'all' : 'none',
+        'background-color': 'rgba(0, 0, 0, 0.4)',
+      }"
+      class="fixed z-50 transition-opacity duration-200 absolute top-0 left-0 w-1/3 h-full cursor-pointer"
+    >
+      <InfoScreen
+        :markov="markov"
+      />
+    </div>
 
   </div>
 </template>
@@ -151,7 +164,9 @@ import { ref, type ComponentPublicInstance, type ComputedRef, type MaybeRefOrGet
 import { useDraggable } from '@vueuse/core'
 import { useStateAnalysis, transitionMatrixToNodesAndEdges } from '@/useStateAnalysis';
 import { getStateAfterNSteps } from '@/useLinearAlgebra';
+import { getColor } from '@/colorizer';
 import DebugScreen from '@/components/DebugScreen.vue';
+import InfoScreen from '@/components/InfoScreen.vue';
 
 type Node = {
   id: number
@@ -517,26 +532,6 @@ const checkDeleteNode = (event: any, node: Node) => {
       killBoxMessage.value = 'Delete Node'
     }, 2000)
   }
-}
-
-const getColor = (node: Node) => {
-
-  const index = markov.value.nodeToCommunicatingClassMap.get(node.id)
-
-  if (markov.value.transientStates.includes(node.id)) return ['Gray', 'border-gray-900']
-  if (index === undefined) return ['Gray', 'border-gray-900']
-
-  const colors = [
-    ['Red', 'border-red-500'],
-    ['Orange', 'border-yellow-500'],
-    ['Green', 'border-green-500'],
-    ['Blue', 'border-blue-500'],
-    ['Indigo', 'border-indigo-500'],
-    ['Purple', 'border-purple-500'],
-    ['Pink', 'border-pink-500'],
-  ]
-
-  return colors[index % colors.length]
 }
 
 const simState = ref({

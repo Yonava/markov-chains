@@ -1,6 +1,6 @@
 <template>
   <div>
-    Info
+    {{ markov }}
   </div>
 </template>
 

@@ -1,6 +1,6 @@
 // add type defs
 
-const getColor = (node: any, markovState: any) => {
+export function getColor(node: any, markovState: any) {
 
   const index = markovState.nodeToCommunicatingClassMap.get(node.id)
 
@@ -10,7 +10,7 @@ const getColor = (node: any, markovState: any) => {
   ]
 
   if (grayedConditions.some((condition) => condition)) {
-    return ['Gray', 'border-gray-900']
+    return ['Gray', 'border-gray-900'] as const
   }
 
   const colors = [
@@ -21,7 +21,7 @@ const getColor = (node: any, markovState: any) => {
     ['Indigo', 'border-indigo-500'],
     ['Purple', 'border-purple-500'],
     ['Pink', 'border-pink-500'],
-  ]
+  ] as const
 
   return colors[index % colors.length]
 }
