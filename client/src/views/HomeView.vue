@@ -63,13 +63,22 @@
 
         <!-- mini nodes -->
         <div
-          v-for="node in miniNodes"
-          @mousedown="miniNodeOnTheMove = true"
-          @mouseup="miniNodeOnTheMove = false; removeMiniNodes()"
-          class="fixed rounded-full bg-gray-800 w-4 h-4 border-4 border-black z-50 cursor-pointer"
+          v-for="(node, index) in miniNodes"
+          @mouseover="miniNodeState.hovered = true"
+          @mouseleave="miniNodeState.hovered = false"
+          @mousedown="miniNodeState.onTheMove = index"
+          @mouseup="miniNodeDropped()"
+          class="fixed rounded-full bg-gray-800 w-6 h-6 border-4 border-black z-50 cursor-pointer"
           :style="node.style + '; opacity:' + (node.style ? 1 : 0)"
           :ref="(el) => (node.ref = el)"
         ></div>
+
+        <div
+          v-if="miniNodeState.onTheMove !== -1"
+          class="fixed bg-gray-900"
+          :style="computeEdgeStyleGivenNodeRefs(miniNodes[miniNodeState.onTheMove].ref, miniNodeState.startNode?.ref, 0).line"
+        >
+        </div>
 
         <!-- nodes -->
         <div
@@ -79,16 +88,15 @@
           <button
             @click="nodeClicked(node)"
             @mouseover="currentNodeOnTop = node.id"
-            @mouseleave="removeMiniNodes()"
             @mouseup="checkDeleteNode($event, node)"
             :class="`fixed w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node)[1] + ' ' + (node.id === currentNodeOnTop ? 'z-40' : 'z-10')"
             :style="node.style + '; opacity:' + (node.style ? 1 : 0)"
             :ref="(el) => (node.ref = el)"
           >
             <div
-              @mouseover="initMiniNodes()"
-              @mouseleave="removeMiniNodes()"
-              class="border border-red-500 w-40 h-40 absolute"
+              @mouseover="initMiniNodes(node)"
+              @mouseleave="removeMiniNodesByNodeLeave()"
+              class="border border-red-500 w-28 h-28 absolute rounded-full"
             ></div>
             <span
               v-if="!simState.running"
@@ -182,13 +190,26 @@ type MiniNode = {
 }
 
 let miniNodes = ref<MiniNode[]>([])
-const miniNodeOnTheMove = ref(false)
 
-const initMiniNodes = async () => {
-  miniNodes.value = new Array(4).fill(0).map((_) => ({ ref: null } as MiniNode))
+const miniNodeState = ref({
+  hovered: false,
+  onTheMove: -1,
+  startNode: null as Node | null,
+  reset: () => {
+    miniNodeState.value.onTheMove = -1
+    miniNodeState.value.hovered = false
+    miniNodeState.value.startNode = null
+  }
+})
+
+const initMiniNodes = async (startNode: Node) => {
+  if (miniNodes.value.length > 0) return
+  // reset miniNodeState
+  miniNodeState.value.reset()
+  miniNodeState.value.startNode = startNode
+  miniNodes.value = new Array(4).fill(0).map((_) => ({} as MiniNode))
   await new Promise((resolve) => setTimeout(resolve, 0))
   miniNodes.value.forEach((node, index) => {
-    console.log(node)
     const { style } = useDraggable(node.ref, {
       initialValue: {
         x: 100 + index * 100,
@@ -199,8 +220,14 @@ const initMiniNodes = async () => {
   })
 }
 
-const removeMiniNodes = () => {
-  if (miniNodeOnTheMove.value) return
+const miniNodeDropped = () => {
+  miniNodes.value = []
+  miniNodeState.value.reset()
+}
+
+const removeMiniNodesByNodeLeave = async () => {
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  if (miniNodeState.value.onTheMove !== -1 || miniNodeState.value.hovered) return
   miniNodes.value = []
 }
 
@@ -264,14 +291,11 @@ const stopEditing = () => {
   currentEdgeBeingEdited.value = -1
 }
 
-const computeEdgeStyle = (edge: Edge) => {
-  const fromNode = nodes.value.find((n) => n.id === edge.from)
-  const toNode = nodes.value.find((n) => n.id === edge.to)
+const computeEdgeStyleGivenNodeRefs = (toNodeRef: any, fromNodeRef: any, offset = 60) => {
+  if (!toNodeRef || !fromNodeRef) return {}
 
-  if (!fromNode || !toNode) return {}
-
-  const fromRect = fromNode.ref.getBoundingClientRect()
-  const toRect = toNode.ref.getBoundingClientRect()
+  const fromRect = fromNodeRef.getBoundingClientRect()
+  const toRect = toNodeRef.getBoundingClientRect()
 
   const x1 = fromRect.x + fromRect.width / 2
   const y1 = fromRect.y + fromRect.height / 2
@@ -299,8 +323,58 @@ const computeEdgeStyle = (edge: Edge) => {
   const unitX = distanceX / Math.sqrt(distanceX ** 2 + distanceY ** 2)
   const unitY = distanceY / Math.sqrt(distanceX ** 2 + distanceY ** 2)
 
-  const curveRadius = 25
+  const arrow = {
+    width: 0,
+    height: 0,
+    transform: `translate(${length - 60}px, -16px)`,
+    'border-top': '20px solid transparent',
+    'border-bottom': '20px solid transparent',
+    'border-left': '20px solid rgb(17 24 39)',
+  }
 
+  const weight = {
+    transform: `rotate(${-1 * angle}deg) translate(${-Math.cos(radians) * length / 3}px, ${-Math.sin(radians) * length / 3}px)`
+  }
+
+  const line = {
+    width: `${length - offset}px`,
+    height: '8px',
+    transform: `rotate(${angle}deg)`,
+    transformOrigin: '0 0',
+    top: `${y1 - unitY * 4}px`,
+    left: `${x1 - unitX * 4}px`,
+  }
+
+  return {
+    line,
+    arrow,
+    weight,
+    y1,
+    x1,
+    distanceX,
+    distanceY,
+    radians,
+  }
+}
+
+const computeEdgeStyle = (edge: Edge) => {
+  const fromNode = nodes.value.find((n) => n.id === edge.from)
+  const toNode = nodes.value.find((n) => n.id === edge.to)
+
+  if (!fromNode || !toNode) return {}
+
+  const {
+    line,
+    arrow,
+    weight,
+    y1,
+    x1,
+    distanceX,
+    distanceY,
+    radians,
+  } = computeEdgeStyleGivenNodeRefs(toNode.ref, fromNode.ref)
+
+  const curveRadius = 25
   if (edge.from === edge.to) {
     return {
       line: {
@@ -338,76 +412,21 @@ const computeEdgeStyle = (edge: Edge) => {
 
   const isBidirectional = ingoingNodeChildren.includes(edge.from) && outgoingNodeChildren.includes(edge.to)
 
+  const bidirectionalAdjustment = {
+    top: `${y1 + distanceY}px`,
+    left: `${x1 + distanceX}px`,
+  }
+
   if (isBidirectional) {
-    if (edge.from < edge.to) {
-      return {
-        line: {
-          width: `${length - 60}px`,
-          height: '8px',
-          transform: `rotate(${angle}deg)`,
-          transformOrigin: `0 0`,
-          top: `${y1 + distanceY}px`,
-          left: `${x1 + distanceX}px`,
-        },
-        arrow: {
-          width: 0,
-          height: 0,
-          transform: `translate(${length - 60}px, -16px)`,
-          'border-top': '20px solid transparent',
-          'border-bottom': '20px solid transparent',
-          'border-left': '20px solid rgb(17 24 39)',
-        },
-        weight: {
-          transform: `rotate(${-1 * angle}deg) translate(${-Math.cos(radians) * length / 3}px, ${-Math.sin(radians) * length / 3}px)`
-        }
-      }
-    } else {
-      return {
-        line: {
-          width: `${length - 60}px`,
-          height: '8px',
-          transform: `rotate(${angle}deg)`,
-          transformOrigin: `0 0`,
-          top: `${y1 + distanceY}px`,
-          left: `${x1 + distanceX}px`,
-        },
-        arrow: {
-          width: 0,
-          height: 0,
-          transform: `translate(${length - 60}px, -16px)`,
-          'border-top': '20px solid transparent',
-          'border-bottom': '20px solid transparent',
-          'border-left': '20px solid rgb(17 24 39)',
-        },
-        weight: {
-          transform: `rotate(${-1 * angle}deg) translate(${-Math.cos(radians) * length / 3}px, ${-Math.sin(radians) * length / 3}px)`
-        }
-      }
-    }
+    line.top = bidirectionalAdjustment.top
+    line.left = bidirectionalAdjustment.left
   }
 
   return {
-    line: {
-      width: `${length - 60}px`,
-      height: '8px',
-      transform: `rotate(${angle}deg)`,
-      transformOrigin: '0 0',
-      top: `${y1 - unitY * 4}px`,
-      left: `${x1 - unitX * 4}px`,
-    },
-    arrow: {
-      width: 0,
-      height: 0,
-      transform: `translate(${length - 60}px, -16px)`,
-      'border-top': '20px solid transparent',
-      'border-bottom': '20px solid transparent',
-      'border-left': '20px solid rgb(17 24 39)',
-    },
-    weight: {
-      transform: `rotate(${-1 * angle}deg) translate(${-Math.cos(radians) * length / 3}px, ${-Math.sin(radians) * length / 3}px)`
-    }
+    line,
+    arrow,
+    weight
   }
-
 }
 
 const killBox = ref(null)
