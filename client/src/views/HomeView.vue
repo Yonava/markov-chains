@@ -57,17 +57,19 @@
         <!-- mini nodes -->
         <div
           v-for="(node, index) in miniNodes"
+          :key="index"
           @mouseover="miniNodeState.hovered = true"
           @mouseleave="miniNodeState.hovered = false"
           @mousedown="miniNodeState.onTheMove = index"
           @mouseup="miniNodeDropped()"
-          class="fixed rounded-full bg-gray-800 w-6 h-6 border-4 border-black z-50 cursor-pointer hover:bg-gray-900"
+          class="fixed rounded-full bg-gray-900 w-6 h-6 z-50 cursor-pointer scale-90 hover:scale-110 transition ease-in-out duration-200"
           :style="node.style + '; opacity:' + (node.style ? 1 : 0)"
           :ref="(el) => (node.ref = el)"
-        ></div>
+        >
+        </div>
           <div
             v-if="miniNodeState.onTheMove !== -1"
-            class="fixed bg-gray-900"
+            class="fixed bg-gray-900 z-30"
             :style="computeEdgeStyleGivenNodeRefs(miniNodes[miniNodeState.onTheMove].ref, miniNodeState.startNode?.ref, 0).line"
           >
         </div>
@@ -79,7 +81,7 @@
         >
           <button
             @mousedown="nodeClicked(node)"
-            @mouseover="currentNodeOnTop = node.id"
+            @mouseover="updateNodeOnTop(node.id)"
             @mouseup="checkDeleteNode($event, node); initMiniNodes(node)"
             :class="`fixed w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node, markov)[1] + ' ' + (node.id === currentNodeOnTop ? 'z-40' : 'z-10')"
             :style="node.style + '; opacity:' + (node.style ? 1 : 0)"
@@ -219,10 +221,10 @@ const initMiniNodes = async (startNode: Node) => {
   await new Promise((resolve) => setTimeout(resolve, 0))
 
   const offsets = [
-    { x: 25, y: -15 }, // top
-    { x: 70, y: 30 }, // right
-    { x: -15, y: 25 }, // left
-    { x: 25, y: 70 }, // bottom
+    { x: 28, y: -10 }, // top
+    { x: 65, y: 30 }, // right
+    { x: -10, y: 30 }, // left
+    { x: 28, y: 65 }, // bottom
   ]
 
   miniNodes.value.forEach((node, index) => {
@@ -331,7 +333,23 @@ const addEdge = (options: {
 
 const currentNodeOnTop = ref(-1)
 
+const updateNodeOnTop = (nodeId: number) => {
+  if (miniNodeState.value.onTheMove !== -1) return
+  currentNodeOnTop.value = nodeId
+}
+
+const currentEdgeBeingEdited = ref(-1)
+
+const startEditing = (edgeId: number) => {
+  currentEdgeBeingEdited.value = edgeId
+}
+const stopEditing = () => {
+  reComputeMarkov()
+  currentEdgeBeingEdited.value = -1
+}
+
 const computeEdgeStyleGivenNodeRefs = (toNodeRef: any, fromNodeRef: any, offset = 60, z = 0) => {
+
   if (!toNodeRef || !fromNodeRef) return {}
 
   const fromRect = fromNodeRef.getBoundingClientRect()
@@ -564,4 +582,65 @@ const runSimulation = () => {
     }
   }, 500)
 }
+
+// const edgeAngleMap = ref(new Map < number, {
+//   edgeId: number,
+//   angle: number,
+// }[]>())
+
+
+// const addToEdgeAngleMap = (nodeId: number, edgeId: number, angle: number): void => {
+//   // check if node in map
+//   // if no, add it
+//   // if yes check if edge id in  list
+//   // if yes, update
+//   // if no, add it
+
+//   const currentNode = edgeAngleMap.value.get(nodeId) || []
+
+//   if (currentNode.find(edge => edge.edgeId === edgeId) === undefined) {
+//     edgeAngleMap.value.set(nodeId, [...currentNode, {
+//       edgeId: edgeId,
+//       angle: angle
+//     }])
+//   } else {
+//     const index = currentNode.findIndex(edge => edge.edgeId === edgeId);
+//     if (index !== -1) currentNode[index].angle = angle
+//   }
+// }
+
+// const deleteFromEdgeAngleMap = (nodeId: number) => {
+//   edgeAngleMap.value.delete(nodeId);
+// }
+
+// const getOpenSpace = (angles: {
+//   edgeId: number,
+//   angle: number,
+// }[]): number => {
+//   // does not work for more than 2 edges
+
+//   // all in degrees
+//   if (angles.length === 0) return 0
+//   if (angles.length === 1) return angles[0].angle + 90
+
+//   let maxDifference = -Infinity
+//   let maxDifferenceIndex = 0
+
+//   for (let i = 0; i < angles.length; i++) {
+//     for (let j = i + 1; j < angles.length; j++) {
+//       const currentAngle = angles[i].angle
+//       const nextAngle = angles[j].angle
+//       const difference = (nextAngle - currentAngle + 360) % 360 // Circular difference
+
+//       if (difference > maxDifference) {
+//         maxDifference = difference
+//         maxDifferenceIndex = i
+//       }
+//     }
+//   }
+
+//   // Calculate the circular average angle between the two angles
+//   const averageAngle = angles[maxDifferenceIndex].angle + maxDifference / 2
+//   return (averageAngle + 90) % 360 + 180
+// }
 </script>
