@@ -39,6 +39,12 @@
         >
           Select A Node
         </button>
+        <button
+          @click="showInfo = !showInfo"
+          class="bg-gray-800 absolute bottom-0 left-0 w-60 h-20 hover:bg-gray-900 text-white text-3xl z-10"
+        >
+          {{ showInfo ? 'Hide' : 'Show' }} Info
+        </button>
 
         <!-- node killer -->
         <div
@@ -77,7 +83,7 @@
             @mousedown="nodeClicked(node)"
             @mouseover="updateNodeOnTop(node.id)"
             @mouseup="checkDeleteNode($event, node); initMiniNodes(node)"
-            :class="`fixed w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node)[1] + ' ' + ((node.id === currentNodeOnTop) ? 'z-40' : 'z-10')"
+            :class="`fixed w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center hover:bg-gray-900 border-4 ` + getColor(node, markov)[1] + ' ' + (node.id === currentNodeOnTop ? 'z-40' : 'z-10')"
             :style="node.style + '; opacity:' + (node.style ? 1 : 0)"
             :ref="(el) => (node.ref = el)"
           >
@@ -113,23 +119,12 @@
             <div
               :style="computeEdgeStyle(edge).arrow"
             >
-              <div v-if="!markovOptions.uniformEdgeProbability">
-                <p
-                  v-if="edge.id !== currentEdgeBeingEdited"
-                  @dblclick="startEditing(edge.id)"
-                  :style="computeEdgeStyle(edge).weight"
-                  class="text-white"
-                >{{ edge.weight }}</p>
-                <input
-                  v-else
-                  @blur="stopEditing()"
-                  @keyup.enter="stopEditing()"
-                  :v-bind="edge.weight"
-                  :style="computeEdgeStyle(edge).weight"
-                  type="text"
-                  v-model.number="edge.weight"
-                >
-              </div>
+              <input
+                v-if="!markovOptions.uniformEdgeProbability"
+                v-model.number="edge.weight"
+                :style="computeEdgeStyle(edge).weight"
+                class="w-8 bg-transparent text-white font-bold text-xl"
+              />
             </div>
           </div>
         </div>
@@ -138,6 +133,19 @@
     </div>
 
     <DebugScreen :markov="markov" />
+    <div
+      @click="showInfo = false"
+      :style="{
+        'opacity': showInfo ? 1 : 0,
+        'pointer-events': showInfo ? 'all' : 'none',
+        'background-color': 'rgba(0, 0, 0, 0.6)',
+      }"
+      class="fixed z-50 transition-opacity duration-200 absolute top-0 left-0 w-1/3 h-full cursor-pointer"
+    >
+      <InfoScreen
+        :markov="markov"
+      />
+    </div>
 
   </div>
 </template>
@@ -147,7 +155,9 @@ import { ref, type ComponentPublicInstance, type ComputedRef, type MaybeRefOrGet
 import { useDraggable } from '@vueuse/core'
 import { useStateAnalysis, transitionMatrixToNodesAndEdges } from '@/useStateAnalysis';
 import { getStateAfterNSteps } from '@/useLinearAlgebra';
+import { getColor } from '@/colorizer';
 import DebugScreen from '@/components/DebugScreen.vue';
+import InfoScreen from '@/components/InfoScreen.vue';
 
 type Node = {
   id: number
@@ -164,6 +174,14 @@ type Edge = {
   to: number
   weight: number
 }
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'i') {
+    showInfo.value = !showInfo.value
+  }
+})
+
+const showInfo = ref(false)
 
 const nodesCreated = ref(0)
 
@@ -189,7 +207,9 @@ const miniNodeState = ref({
 })
 
 const initMiniNodes = async (startNode: Node) => {
-  if (miniNodes.value.length > 0) return
+
+  if (miniNodeState.value.onTheMove !== -1) return
+
   // reset miniNodeState
   miniNodeState.value.reset()
   miniNodeState.value.startNode = startNode
@@ -267,6 +287,10 @@ const generateNewNodesAndEdges = () => {
   const matrixSize = Math.floor(Math.random() * 10) + 1
   const edgeValue = () => Math.random() < 1 / matrixSize ? Number(Math.random().toFixed(2)) : 0
   const newTransitionMatrix = new Array(matrixSize).fill(0).map(() => new Array(matrixSize).fill(0).map(() => edgeValue()))
+  // const matrix = [
+  //   [0.8, 0.2],
+  //   [0.6, 0.4]
+  // ]
   transitionMatrixToNodesAndEdges(
     newTransitionMatrix,
     addNode,
@@ -324,7 +348,8 @@ const stopEditing = () => {
   currentEdgeBeingEdited.value = -1
 }
 
-const computeEdgeStyleGivenNodeRefs = (toNodeRef: any, fromNodeRef: any, offset = 60) => {
+const computeEdgeStyleGivenNodeRefs = (toNodeRef: any, fromNodeRef: any, offset = 60, z = 0) => {
+
   if (!toNodeRef || !fromNodeRef) return {}
 
   const fromRect = fromNodeRef.getBoundingClientRect()
@@ -370,6 +395,7 @@ const computeEdgeStyleGivenNodeRefs = (toNodeRef: any, fromNodeRef: any, offset 
   }
 
   const line = {
+    zIndex: z,
     width: `${length - offset}px`,
     height: '8px',
     transform: `rotate(${angle}deg)`,
@@ -491,6 +517,9 @@ const addNode = async () => {
 }
 
 const checkDeleteNode = (event: any, node: Node) => {
+
+  removeMiniNodesByNodeLeave()
+
   // see if node is in kill box
   const killBoxRect = killBox.value.getBoundingClientRect()
   const nodeRect = event.target.getBoundingClientRect()
@@ -516,26 +545,6 @@ const checkDeleteNode = (event: any, node: Node) => {
       killBoxMessage.value = 'Delete Node'
     }, 2000)
   }
-}
-
-const getColor = (node: Node) => {
-
-  const index = markov.value.nodeToCommunicatingClassMap.get(node.id)
-
-  if (markov.value.transientStates.includes(node.id)) return ['Gray', 'border-gray-900']
-  if (index === undefined) return ['Gray', 'border-gray-900']
-
-  const colors = [
-    ['Red', 'border-red-500'],
-    ['Orange', 'border-yellow-500'],
-    ['Green', 'border-green-500'],
-    ['Blue', 'border-blue-500'],
-    ['Indigo', 'border-indigo-500'],
-    ['Purple', 'border-purple-500'],
-    ['Pink', 'border-pink-500'],
-  ]
-
-  return colors[index % colors.length]
 }
 
 const simState = ref({
