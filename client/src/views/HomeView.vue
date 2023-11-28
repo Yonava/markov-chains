@@ -123,7 +123,7 @@
                 v-if="!markovOptions.uniformEdgeProbability"
                 v-model.number="edge.weight"
                 :style="computeEdgeStyle(edge).weight"
-                class="w-8 bg-transparent text-white font-bold text-xl"
+                class="w-12 bg-transparent text-white font-bold text-xl"
               />
             </div>
           </div>
