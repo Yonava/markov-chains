@@ -123,7 +123,7 @@
                 v-if="!markovOptions.uniformEdgeProbability"
                 v-model.number="edge.weight"
                 :style="computeEdgeStyle(edge).weight"
-                class="w-8 bg-transparent text-white font-bold text-xl"
+                class="w-12 bg-transparent text-white font-bold text-xl"
               />
             </div>
           </div>
@@ -348,7 +348,7 @@ const stopEditing = () => {
   currentEdgeBeingEdited.value = -1
 }
 
-const computeEdgeStyleGivenNodeRefs = (toNodeRef: any, fromNodeRef: any, offset = 60, z = 0) => {
+const computeEdgeStyleGivenNodeRefs = (toNodeRef: any, fromNodeRef: any, offset = 60) => {
 
   if (!toNodeRef || !fromNodeRef) return {}
 
@@ -395,7 +395,6 @@ const computeEdgeStyleGivenNodeRefs = (toNodeRef: any, fromNodeRef: any, offset 
   }
 
   const line = {
-    zIndex: z,
     width: `${length - offset}px`,
     height: '8px',
     transform: `rotate(${angle}deg)`,
