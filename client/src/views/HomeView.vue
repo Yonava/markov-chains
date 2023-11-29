@@ -80,6 +80,7 @@
           :key="node.id"
         >
           <button
+            @keyup.delete="deleteNode(node)"
             @mousedown="nodeClicked(node)"
             @mouseover="updateNodeOnTop(node.id)"
             @mouseup="checkDeleteNode($event, node); initMiniNodes(node)"
@@ -178,6 +179,12 @@ type Edge = {
 document.addEventListener('keydown', (event) => {
   if (event.key === 'i') {
     showInfo.value = !showInfo.value
+  } else if (event.key === 'r') {
+    generateNewNodesAndEdges()
+  } else if (event.key === 's') {
+    simState.value.ready = !simState.value.ready
+  } else if (event.key === 'n') {
+    addNode()
   }
 })
 
@@ -516,34 +523,27 @@ const addNode = async () => {
 }
 
 const checkDeleteNode = (event: any, node: Node) => {
-
-  removeMiniNodesByNodeLeave()
-
-  // see if node is in kill box
   const killBoxRect = killBox.value.getBoundingClientRect()
   const nodeRect = event.target.getBoundingClientRect()
-
   if (
     nodeRect.x > killBoxRect.x - 60 &&
     nodeRect.x < killBoxRect.x + killBoxRect.width + 60 &&
     nodeRect.y > killBoxRect.y - 60 &&
     nodeRect.y < killBoxRect.y + killBoxRect.height + 60
   ) {
-
-    // delete node
-    const index = nodes.value.findIndex((n) => n.id === node.id)
-
-    // delete all edges connected to node
-    edges.value = edges.value.filter((e) => e.from !== node.id && e.to !== node.id)
-
-    // update kill box message
     killBoxMessage.value = `Node ${node.id} Was Tasty!`
-    nodes.value.splice(index, 1)
-
+    deleteNode(node)
     setTimeout(() => {
       killBoxMessage.value = 'Delete Node'
     }, 2000)
   }
+}
+
+const deleteNode = (node: Node) => {
+  removeMiniNodesByNodeLeave()
+  const index = nodes.value.findIndex((n) => n.id === node.id)
+  edges.value = edges.value.filter((e) => e.from !== node.id && e.to !== node.id)
+  nodes.value.splice(index, 1)
 }
 
 const simState = ref({
