@@ -440,17 +440,18 @@ const computeEdgeStyle = (edge: Edge) => {
   } = computeEdgeStyleGivenNodeRefs(toNode.ref, fromNode.ref)
 
   const curveRadius = 25
+  const angle = 128
   if (edge.from === edge.to) {
     return {
       line: {
         position: 'absolute',
-        top: `${y1 - 190}px`,
-        left: `${x1}px`,
+        top: `${y1 - 216}px`,
+        left: `${x1 - 65}px`,
         width: `${distanceY * 2 + 16}px`,
         height: `100px`,
-        'transform-origin': '0 0',
+        'transform-origin': '50% 100%',
         // 45 deg should become 50% of greatest angle between other edges
-        transform: 'rotate(45deg)',
+        transform: `rotate(${angle}deg)`,
         'border-radius': `${curveRadius}px ${curveRadius}px 0 0`,
         border: '8px solid rgb(17 24 39)',
         background: 'transparent',
@@ -458,7 +459,7 @@ const computeEdgeStyle = (edge: Edge) => {
       arrow: {
         width: 0,
         height: 0,
-        transform: `translate(-26px, 26px)`,
+        transform: `translate(-24px, 38px)`,
         'border-left': '20px solid transparent',
         'border-right': '20px solid transparent',
         'border-top': '20px solid rgb(17 24 39)',
@@ -466,7 +467,7 @@ const computeEdgeStyle = (edge: Edge) => {
       weight: {
         // 45 deg should become 50% of greatest angle between other edges
         'transform-origin': '0 0',
-        transform: `rotate(${-1 * 45}deg) translate(${Math.cos(radians) * 10}px, ${-Math.cos(radians) * 60}px)`
+        transform: `rotate(${-1 * angle}deg) translate(${Math.cos(radians) * 10}px, ${-Math.cos(radians) * 60}px)`
       }
     }
   }
