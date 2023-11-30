@@ -1,6 +1,5 @@
 <template>
   <div class="absolute w-full h-full bg-gray-600" style="user-select: none;">
-    <button class="fixed text-white" @click="markovOptions.uniformEdgeProbability = !markovOptions.uniformEdgeProbability">Edge Prob Toggle</button>
     <div class="flex flex-col items-center justify-center h-full p-12">
       <h1
         @click="generateNewNodesAndEdges"
@@ -11,7 +10,7 @@
       <div class="w-full h-[900px] bg-gray-700 rounded-xl relative overflow-hidden">
         <!-- control panel -->
         <button
-          @click="addNode"
+          @click="addNode()"
           class="bg-gray-800 absolute top-0 left-0 w-60 h-20 hover:bg-gray-900 text-white text-3xl"
         >
           New Node
@@ -176,16 +175,22 @@ type Edge = {
   weight: number
 }
 
+const keybindings = {
+  'r': () => generateNewNodesAndEdges(),
+  's': () => simState.value.ready = !simState.value.ready,
+  'n': () => addNode(),
+  '+': () => markovOptions.value.steadyStatePrecision++,
+  '-': () => markovOptions.value.steadyStatePrecision--,
+  'e': () => markovOptions.value.uniformEdgeProbability = !markovOptions.value.uniformEdgeProbability,
+  'p': () => toggleSimulationPause(),
+} as Record<string, () => void>
+
 document.addEventListener('keydown', (event) => {
-  if (event.key === 'i') {
-    showInfo.value = !showInfo.value
-  } else if (event.key === 'r') {
-    generateNewNodesAndEdges()
-  } else if (event.key === 's') {
-    simState.value.ready = !simState.value.ready
-  } else if (event.key === 'n') {
-    addNode()
-  }
+  if (keybindings[event.key]) keybindings[event.key]()
+})
+
+document.addEventListener('dblclick', (event) => {
+  addNode(event.clientX - 40, event.clientY - 40)
 })
 
 const showInfo = ref(false)
@@ -294,12 +299,13 @@ const generateNewNodesAndEdges = () => {
   const matrixSize = Math.floor(Math.random() * 10) + 1
   const edgeValue = () => Math.random() < 1 / matrixSize ? Number(Math.random().toFixed(2)) : 0
   const newTransitionMatrix = new Array(matrixSize).fill(0).map(() => new Array(matrixSize).fill(0).map(() => edgeValue()))
-  // const matrix = [
-  //   [0.8, 0.2],
-  //   [0.6, 0.4]
-  // ]
+  const matrix = [
+    [0.25, 0.75, 0],
+    [0, (1/3), (2/3)],
+    [(2/3), 0, (1/3)]
+  ]
   transitionMatrixToNodesAndEdges(
-    newTransitionMatrix,
+    matrix,
     addNode,
     addEdge
   )
@@ -310,11 +316,7 @@ const markovOptions = ref({
   steadyStatePrecision: 3
 })
 
-const {
-  state: markov,
-  reCompute: reComputeMarkov,
-} = useStateAnalysis(nodes, edges, markovOptions)
-
+const { state: markov } = useStateAnalysis(nodes, edges, markovOptions)
 
 const addEdge = (options: {
   to: number
@@ -343,16 +345,6 @@ const currentNodeOnTop = ref(-1)
 const updateNodeOnTop = (nodeId: number) => {
   if (miniNodeState.value.onTheMove !== -1) return
   currentNodeOnTop.value = nodeId
-}
-
-const currentEdgeBeingEdited = ref(-1)
-
-const startEditing = (edgeId: number) => {
-  currentEdgeBeingEdited.value = edgeId
-}
-const stopEditing = () => {
-  reComputeMarkov()
-  currentEdgeBeingEdited.value = -1
 }
 
 const computeEdgeStyleGivenNodeRefs = (toNodeRef: any, fromNodeRef: any, offset = 60) => {
@@ -498,7 +490,7 @@ const computeEdgeStyle = (edge: Edge) => {
 const killBox = ref(null)
 const killBoxMessage = ref('Delete Node')
 
-const addNode = async () => {
+const addNode = async (x?: number, y?: number) => {
 
   const node: Node = {
     id: nodesCreated.value++,
@@ -514,8 +506,8 @@ const addNode = async () => {
 
   const { style } = useDraggable(node.ref, {
     initialValue: {
-      x: 250 + Math.floor(Math.random() * 500),
-      y: 250 + Math.floor(Math.random() * 500)
+      x: x ?? 250 + Math.floor(Math.random() * 500),
+      y: y ?? 250 + Math.floor(Math.random() * 500)
     },
   })
 
@@ -552,6 +544,7 @@ const simState = ref({
   ready: false,
   step: 0,
   probVector: [] as number[],
+  paused: false,
 })
 
 const nodeClicked = (node: Node) => {
@@ -566,8 +559,9 @@ const nodeClicked = (node: Node) => {
   }
 }
 
+let sim: number;
 const runSimulation = () => {
-  const sim = setInterval(() => {
+  sim = setInterval(() => {
     if (simState.value.running) {
       simState.value.step++
       simState.value.probVector = getStateAfterNSteps(
@@ -581,6 +575,15 @@ const runSimulation = () => {
       simState.value.step = 0
     }
   }, 500)
+}
+
+const toggleSimulationPause = () => {
+  simState.value.paused = !simState.value.paused
+  if (simState.value.paused) {
+    clearInterval(sim)
+  } else {
+    runSimulation()
+  }
 }
 
 // const edgeAngleMap = ref(new Map < number, {
