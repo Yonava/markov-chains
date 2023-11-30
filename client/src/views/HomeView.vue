@@ -558,7 +558,7 @@ const nodeClicked = (node: Node) => {
   }
 }
 
-let sim: any = null
+let sim: number;
 const runSimulation = () => {
   sim = setInterval(() => {
     if (simState.value.running) {
