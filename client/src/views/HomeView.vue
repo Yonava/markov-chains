@@ -349,7 +349,7 @@ const updateNodeOnTop = (nodeId: number) => {
 
 const computeEdgeStyleGivenNodeRefs = (toNodeRef: any, fromNodeRef: any, offset = 60) => {
 
-  if (!toNodeRef || !fromNodeRef) return {}
+  if (!toNodeRef || !fromNodeRef) return null
 
   const fromRect = fromNodeRef.getBoundingClientRect()
   const toRect = toNodeRef.getBoundingClientRect()
@@ -418,18 +418,13 @@ const computeEdgeStyle = (edge: Edge) => {
   const fromNode = nodes.value.find((n) => n.id === edge.from)
   const toNode = nodes.value.find((n) => n.id === edge.to)
 
-  if (!fromNode || !toNode) return {}
+  if (!fromNode || !toNode) return null
 
-  const {
-    line,
-    arrow,
-    weight,
-    y1,
-    x1,
-    distanceX,
-    distanceY,
-    radians,
-  } = computeEdgeStyleGivenNodeRefs(toNode.ref, fromNode.ref)
+  const edgeStyleData = computeEdgeStyleGivenNodeRefs(toNode.ref, fromNode.ref)
+
+  if (!edgeStyleData) return null
+
+  const { line, arrow, weight, y1, x1, distanceX, distanceY, radians } = edgeStyleData
 
   const curveRadius = 25
   const angle = 128
