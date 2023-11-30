@@ -1,6 +1,5 @@
 <template>
   <div class="absolute w-full h-full bg-gray-600" style="user-select: none;">
-    <button class="fixed text-white" @click="markovOptions.uniformEdgeProbability = !markovOptions.uniformEdgeProbability">Edge Prob Toggle</button>
     <div class="flex flex-col items-center justify-center h-full p-12">
       <h1
         @click="generateNewNodesAndEdges"
@@ -159,7 +158,6 @@ import { getStateAfterNSteps } from '@/useLinearAlgebra';
 import { getColor } from '@/colorizer';
 import DebugScreen from '@/components/DebugScreen.vue';
 import InfoScreen from '@/components/InfoScreen.vue';
-import { e } from 'mathjs';
 
 type Node = {
   id: number
@@ -184,6 +182,7 @@ const keybindings = {
   '+': () => markovOptions.value.steadyStatePrecision++,
   '-': () => markovOptions.value.steadyStatePrecision--,
   'e': () => markovOptions.value.uniformEdgeProbability = !markovOptions.value.uniformEdgeProbability,
+  'p': () => toggleSimulationPause(),
 } as Record<string, () => void>
 
 document.addEventListener('keydown', (event) => {
@@ -191,7 +190,6 @@ document.addEventListener('keydown', (event) => {
 })
 
 document.addEventListener('dblclick', (event) => {
-  // call addNode with params of x and y
   addNode(event.clientX - 40, event.clientY - 40)
 })
 
@@ -545,6 +543,7 @@ const simState = ref({
   ready: false,
   step: 0,
   probVector: [] as number[],
+  paused: false,
 })
 
 const nodeClicked = (node: Node) => {
@@ -559,8 +558,9 @@ const nodeClicked = (node: Node) => {
   }
 }
 
+let sim: any = null
 const runSimulation = () => {
-  const sim = setInterval(() => {
+  sim = setInterval(() => {
     if (simState.value.running) {
       simState.value.step++
       simState.value.probVector = getStateAfterNSteps(
@@ -574,6 +574,15 @@ const runSimulation = () => {
       simState.value.step = 0
     }
   }, 500)
+}
+
+const toggleSimulationPause = () => {
+  simState.value.paused = !simState.value.paused
+  if (simState.value.paused) {
+    clearInterval(sim)
+  } else {
+    runSimulation()
+  }
 }
 
 // const edgeAngleMap = ref(new Map < number, {
