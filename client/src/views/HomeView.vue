@@ -300,9 +300,9 @@ const generateNewNodesAndEdges = () => {
   const edgeValue = () => Math.random() < 1 / matrixSize ? Number(Math.random().toFixed(2)) : 0
   const newTransitionMatrix = new Array(matrixSize).fill(0).map(() => new Array(matrixSize).fill(0).map(() => edgeValue()))
   const matrix = [
-    [0.25, 0.75, 0],
-    [0, (1/3), (2/3)],
-    [(2/3), 0, (1/3)]
+    [(1/3), (2/3), 0],
+    [(1/4), (1/2), (1/4)],
+    [0, (1/4), (3/4)]
   ]
   transitionMatrixToNodesAndEdges(
     matrix,
