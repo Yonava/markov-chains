@@ -11,6 +11,7 @@
         <!-- control panel -->
         <button
           @click="addNode()"
+          @dblclick.stop
           class="bg-gray-800 absolute top-0 left-0 w-60 h-20 hover:bg-gray-900 text-white text-3xl"
         >
           New Node
