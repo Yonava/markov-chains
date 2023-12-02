@@ -390,7 +390,7 @@ const computeEdgeStyleGivenNodeRefs = (toNodeRef: any, fromNodeRef: any, offset 
   }
 
   const weight = {
-    transform: `rotate(${-1 * angle}deg) translate(${-Math.cos(radians) * length / 3}px, ${-Math.sin(radians) * length / 3}px)`
+    transform: `rotate(${-1 * angle}deg) translate(${-Math.cos(radians) * length / 2.5}px, ${-Math.sin(radians) * length / 2.5}px)`
   }
 
   const line = {
@@ -454,7 +454,7 @@ const computeEdgeStyle = (edge: Edge) => {
       weight: {
         // 45 deg should become 50% of greatest angle between other edges
         'transform-origin': '0 0',
-        transform: `rotate(${-1 * angle}deg) translate(${Math.cos(radians) * 10}px, ${-Math.cos(radians) * 60}px)`
+        transform: `rotate(${-1 * angle}deg) translate(${Math.cos(radians) * 30}px, ${-Math.cos(radians) * 3}px)`
       }
     }
   }
