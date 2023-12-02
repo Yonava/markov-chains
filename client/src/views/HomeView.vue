@@ -297,6 +297,14 @@ const removeMiniNodesByNodeLeave = async () => {
 
 const deleteEdge = (edgeId: number) => {
   edges.value = edges.value.filter(edge => edge.id !== edgeId)
+  
+  // remove from edgeAngleMap
+  for (const nodeId of edgeAngleMap.value.keys()) {
+    let node = edgeAngleMap.value.get(nodeId)
+    if (node) {
+        node = node.filter(edgeAnglePair => edgeAnglePair.edgeId !== edgeId)
+    }
+  }
 }
 
 const generateNewNodesAndEdges = () => {
@@ -353,6 +361,58 @@ const updateNodeOnTop = (nodeId: number) => {
   if (miniNodeState.value.onTheMove !== -1) return
   currentNodeOnTop.value = nodeId
 }
+
+const edgeAngleMap = ref(new Map<number, {
+  edgeId: number,
+  angle: number,
+}[]>())
+
+
+const addToEdgeAngleMap = (nodeId: number, edgeId: number, angle: number): void => {
+  const currentNode = edgeAngleMap.value.get(nodeId) || []
+  const currentNodeSet = new Set(currentNode.map(edge => edge.edgeId));
+  if (!currentNodeSet.has(edgeId)) {
+    edgeAngleMap.value.set(nodeId, [...currentNode, {
+      edgeId: edgeId,
+      angle: angle
+    }])
+  } else {
+    const index = currentNode.findIndex(edge => edge.edgeId === edgeId);
+    if (index !== -1) currentNode[index].angle = angle
+  }
+}
+
+const deleteFromEdgeAngleMap = (nodeId: number) => {
+  edgeAngleMap.value.delete(nodeId)
+  // delete associated data
+  edgeAngleMap.value.forEach((nodeData, key) => {
+    const updatedNodeData = nodeData.filter(edge => edge.edgeId !== nodeId)
+    if (updatedNodeData.length > 0) {
+      edgeAngleMap.value.set(key, updatedNodeData)
+    } else {
+      edgeAngleMap.value.delete(key)
+    }
+  })
+}
+
+const getOpenSpace = (angles: { edgeId: number; angle: number }[]): number => {
+  const anglesList = angles.map(angle => angle.angle * (Math.PI / 180))
+
+  let sumSin = 0;
+  let sumCos = 0;
+
+  for (const angleInRadians of anglesList) {
+    sumSin += Math.sin(angleInRadians);
+    sumCos += Math.cos(angleInRadians);
+  }
+
+  const meanAngle = Math.atan2(sumSin / anglesList.length, sumCos / anglesList.length);
+
+  const meanAngleInDegrees = (meanAngle + 2 * Math.PI) % (2 * Math.PI) * (180 / Math.PI);
+
+  return (meanAngleInDegrees - 90) % 360
+}
+
 
 const computeEdgeStyleGivenNodeRefs = (toNodeRef: any, fromNodeRef: any, offset = 60) => {
 
@@ -434,9 +494,10 @@ const computeEdgeStyle = (edge: Edge) => {
 
   const { line, arrow, weight, y1, x1, distanceX, distanceY, radians } = edgeStyleData
 
-  const curveRadius = 25
-  const angle = 128
   if (edge.from === edge.to) {
+
+    const curveRadius = 25
+    const angle = getOpenSpace(edgeAngleMap.value.get(edge.from) ?? [])
     return {
       line: {
         position: 'absolute',
@@ -466,6 +527,9 @@ const computeEdgeStyle = (edge: Edge) => {
       }
     }
   }
+
+  addToEdgeAngleMap(edge.from, edge.id, radians * 180 / Math.PI)
+  addToEdgeAngleMap(edge.to, edge.id, radians * 180 / Math.PI + 180)
 
   // handle bidirectional edges by offsetting them
   const ingoingNodeChildren = markov.value.adjacencyMap.get(edge.to) ?? []
@@ -540,6 +604,7 @@ const deleteNode = (node: Node) => {
   const index = nodes.value.findIndex((n) => n.id === node.id)
   edges.value = edges.value.filter((e) => e.from !== node.id && e.to !== node.id)
   nodes.value.splice(index, 1)
+  deleteFromEdgeAngleMap(node.id)
 }
 
 const simState = ref({
