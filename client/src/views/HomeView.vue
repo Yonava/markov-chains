@@ -113,6 +113,7 @@
           :key="edge.id"
         >
           <div
+            @dblclick.stop="deleteEdge(edge.id)"
             class="fixed bg-gray-900"
             :style="computeEdgeStyle(edge).line"
           >
@@ -121,6 +122,7 @@
             >
               <input
                 v-if="!markovOptions.uniformEdgeProbability"
+                @click.stop
                 v-model.number="edge.weight"
                 :style="computeEdgeStyle(edge).weight"
                 class="w-12 bg-transparent text-white font-bold text-xl"
@@ -292,6 +294,10 @@ const removeMiniNodesByNodeLeave = async () => {
   miniNodes.value = []
 }
 
+const deleteEdge = (edgeId: number) => {
+  edges.value = edges.value.filter(edge => edge.id !== edgeId)
+}
+
 const generateNewNodesAndEdges = () => {
   nodes.value = []
   edges.value = []
@@ -386,7 +392,8 @@ const computeEdgeStyleGivenNodeRefs = (toNodeRef: any, fromNodeRef: any, offset 
     transform: `translate(${length - 60}px, -16px)`,
     'border-top': '20px solid transparent',
     'border-bottom': '20px solid transparent',
-    'border-left': '20px solid rgb(17 24 39)',
+    'border-left': '20px solid',
+    'border-left-color': 'rgb(17 24 39)',
   }
 
   const weight = {
