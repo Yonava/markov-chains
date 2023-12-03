@@ -15,7 +15,7 @@ export function getColor(node: any, markovState: any) {
 
   const colors = [
     ['Red', 'border-red-500'],
-    ['Orange', 'border-yellow-500'],
+    ['Yellow', 'border-yellow-500'],
     ['Green', 'border-green-500'],
     ['Blue', 'border-blue-500'],
     ['Indigo', 'border-indigo-500'],
