@@ -398,6 +398,8 @@ const deleteFromEdgeAngleMap = (nodeId: number) => {
 const getOpenSpace = (angles: { edgeId: number; angle: number }[]): number => {
   const anglesList = angles.map(angle => angle.angle * (Math.PI / 180))
 
+  if (anglesList.length === 0) return 0
+
   let sumSin = 0;
   let sumCos = 0;
 
@@ -458,7 +460,7 @@ const computeEdgeStyleGivenNodeRefs = (toNodeRef: any, fromNodeRef: any, offset 
   }
 
   const weight = {
-    transform: `rotate(${-1 * angle}deg) translate(${-Math.cos(radians) * length / 2.5}px, ${-Math.sin(radians) * length / 2.5}px)`
+    transform: `rotate(${-1 * angle}deg) translate(${-Math.cos(radians) * length / 2.33}px, ${-Math.sin(radians) * length / 2.33}px)`
   }
 
   const line = {
@@ -497,7 +499,8 @@ const computeEdgeStyle = (edge: Edge) => {
   if (edge.from === edge.to) {
 
     const curveRadius = 25
-    const angle = getOpenSpace(edgeAngleMap.value.get(edge.from) ?? [])
+    let angle = getOpenSpace(edgeAngleMap.value.get(edge.from) ?? [])
+    
     return {
       line: {
         position: 'absolute',
@@ -506,7 +509,6 @@ const computeEdgeStyle = (edge: Edge) => {
         width: `${distanceY * 2 + 16}px`,
         height: `100px`,
         'transform-origin': '50% 100%',
-        // 45 deg should become 50% of greatest angle between other edges
         transform: `rotate(${angle}deg)`,
         'border-radius': `${curveRadius}px ${curveRadius}px 0 0`,
         border: '8px solid rgb(17 24 39)',
@@ -521,9 +523,7 @@ const computeEdgeStyle = (edge: Edge) => {
         'border-top': '20px solid rgb(17 24 39)',
       },
       weight: {
-        // 45 deg should become 50% of greatest angle between other edges
-        'transform-origin': '0 0',
-        transform: `rotate(${-1 * angle}deg) translate(${Math.cos(radians) * 30}px, ${-Math.cos(radians) * 3}px)`
+        transform: `translate(12px, -58px) rotate(${-1 * angle}deg) `
       }
     }
   }
