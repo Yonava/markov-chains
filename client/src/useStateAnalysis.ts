@@ -200,7 +200,8 @@ const chainValidator = (transitionMatrix: number[][], nodes: Node[]) => {
   for (let i = 0; i < transitionMatrix.length; i++) {
     const row = transitionMatrix[i]
     const sum = row.reduce((acc, curr) => acc + curr, 0)
-    if (sum !== 1) {
+    const isWithinTolerance = Math.abs(sum - 1) < 0.01
+    if (!isWithinTolerance) {
       illegalStates.push(nodes[i].id)
     }
   }
