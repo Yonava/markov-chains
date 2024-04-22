@@ -178,7 +178,7 @@ type Edge = {
   weight: number
 }
 
-const keybindings = {
+const keybindings: Record<string, () => void> = {
   'r': () => generateNewNodesAndEdges(),
   's': () => simState.value.ready = !simState.value.ready,
   'n': () => addNode(),
@@ -186,7 +186,7 @@ const keybindings = {
   '-': () => markovOptions.value.steadyStatePrecision--,
   'e': () => markovOptions.value.uniformEdgeProbability = !markovOptions.value.uniformEdgeProbability,
   'p': () => toggleSimulationPause(),
-} as Record<string, () => void>
+}
 
 document.addEventListener('keydown', (event) => {
   if (keybindings[event.key]) keybindings[event.key]()
@@ -297,7 +297,7 @@ const removeMiniNodesByNodeLeave = async () => {
 
 const deleteEdge = (edgeId: number) => {
   edges.value = edges.value.filter(edge => edge.id !== edgeId)
-  
+
   // remove from edgeAngleMap
   for (const nodeId of edgeAngleMap.value.keys()) {
     let node = edgeAngleMap.value.get(nodeId)
